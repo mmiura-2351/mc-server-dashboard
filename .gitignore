@@ -1,0 +1,57 @@
+# Reference to existing implementations (local only)
+mc-server-dashboard-api
+mc-server-dashboard-ui
+
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+venv/
+env/
+ENV/
+
+# Build outputs
+dist/
+build/
+*.egg-info/
+.next/
+out/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Test coverage
+coverage/
+.coverage
+*.coverage
+htmlcov/
+
+# Cache
+.cache/
+cache/
+*.cache
