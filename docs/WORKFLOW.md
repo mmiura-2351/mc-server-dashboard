@@ -6,55 +6,72 @@ This document defines the development workflow, Git practices, and collaboration
 
 ## Branching Strategy
 
-We use a **hybrid approach** between Git Flow and GitHub Flow, optimized for continuous development with stable releases.
+We use **Release Flow**, a branching strategy developed by Microsoft that optimizes continuous development with stable releases.
+
+**Philosophy**: `main` is the active development branch. Stable releases are maintained in long-lived `release/x.y.z` branches.
+
+**Reference**: [Microsoft Release Flow](https://devblogs.microsoft.com/devops/release-flow-how-we-do-branching-on-the-vsts-team/)
 
 ### Branch Types
 
-#### `main` - Production Branch
-- **Purpose**: Always deployable, represents the latest release
+#### `main` - Active Development Branch
+- **Purpose**: Continuous integration and development (基本機能が動作するレベル)
 - **Protection**: Branch protection enabled
 - **Direct commits**: ❌ Not allowed
-- **Merges from**: `develop` only (via Pull Request)
-- **Tagged**: Every merge creates a GitHub Release
+- **Merges from**: `feature/*`, `fix/*`, `refactor/*`, `docs/*`, `test/*` (via Pull Request)
+- **Status**: Should be functional but not necessarily production-ready
+- **CI**: All checks must pass before merge
 
-#### `develop` - Development Branch
-- **Purpose**: Integration branch for ongoing development
-- **Protection**: No branch protection (allows flexibility)
-- **Direct commits**: ❌ Not recommended
-- **Merges from**: `feature/*`, `fix/*`, `refactor/*`, etc.
-- **Base for**: All feature branches
+#### `release/x.y.z` - Stable Release Branches
+- **Purpose**: Production-ready stable versions with full functionality guarantee
+- **Protection**: Branch protection enabled, tags immutable
+- **Created from**: `main` when ready for release
+- **Lifespan**: Long-lived (maintained for hotfixes)
+- **Naming**: `release/1.0.0`, `release/1.1.0`, `release/2.0.0`
+- **Tagged**: Each release branch is tagged (`v1.0.0`, `v1.0.1`, etc.)
+- **Deletion**: ❌ Never delete (preserved for history)
+
+**Examples**:
+- `release/1.0.0` → tag `v1.0.0` (initial stable release)
+- `release/1.0.1` → tag `v1.0.1` (hotfix on 1.0.0)
+- `release/1.1.0` → tag `v1.1.0` (new features)
 
 #### `feature/*` - Feature Branches
 - **Purpose**: New features or enhancements
-- **Base**: `develop`
+- **Base**: `main`
 - **Naming**: `feature/brief-description` (e.g., `feature/user-authentication`)
 - **Lifespan**: Short-lived (delete after merge)
+- **Merge to**: `main` (via Squash and merge)
 - **Example**: `feature/server-status-dashboard`
 
 #### `fix/*` - Bug Fix Branches
-- **Purpose**: Bug fixes (including hotfixes)
-- **Base**: `develop`
+- **Purpose**: Bug fixes for main branch
+- **Base**: `main` (for ongoing development bugs)
 - **Naming**: `fix/brief-description` (e.g., `fix/login-error`)
 - **Lifespan**: Short-lived (delete after merge)
-- **Note**: Even urgent hotfixes branch from `develop` and go through a quick release
+- **Merge to**: `main`
+- **Note**: For hotfixes on releases, see Hotfix Workflow below
 
 #### `refactor/*` - Refactoring Branches
 - **Purpose**: Code refactoring without feature changes
-- **Base**: `develop`
+- **Base**: `main`
 - **Naming**: `refactor/brief-description`
 - **Lifespan**: Short-lived (delete after merge)
+- **Merge to**: `main`
 
 #### `docs/*` - Documentation Branches
 - **Purpose**: Documentation updates
-- **Base**: `develop`
+- **Base**: `main`
 - **Naming**: `docs/brief-description`
 - **Lifespan**: Short-lived (delete after merge)
+- **Merge to**: `main`
 
 #### `test/*` - Test Improvement Branches
 - **Purpose**: Adding or improving tests
-- **Base**: `develop`
+- **Base**: `main`
 - **Naming**: `test/brief-description`
 - **Lifespan**: Short-lived (delete after merge)
+- **Merge to**: `main`
 
 ### Branch Naming Rules
 
@@ -143,14 +160,14 @@ refactor(auth): simplify JWT token validation logic
 - Use body to explain "what" and "why", not "how"
 - Reference issues and PRs in the footer
 
-## Pull Request Workflow
+## Development Workflows
 
-### Creating a Pull Request
+### Feature Development Workflow
 
-1. **Create a branch** from `develop`
+1. **Create a branch** from `main`
    ```bash
-   git checkout develop
-   git pull origin develop
+   git checkout main
+   git pull origin main
    git checkout -b feature/my-feature
    ```
 
@@ -160,10 +177,10 @@ refactor(auth): simplify JWT token validation logic
    git commit -m "feat(scope): description"
    ```
 
-3. **Keep branch updated** with develop
+3. **Keep branch updated** with main
    ```bash
    git fetch origin
-   git rebase origin/develop
+   git rebase origin/main
    ```
 
 4. **Push to remote**
@@ -172,10 +189,90 @@ refactor(auth): simplify JWT token validation logic
    ```
 
 5. **Create Pull Request** on GitHub
-   - Base: `develop`
-   - Title: Clear, descriptive summary
+   - Base: `main`
+   - Title: Clear, descriptive summary (Conventional Commits format)
    - Description: Context, changes, testing notes
    - Link related issues
+
+6. **Merge** after CI passes and review (if applicable)
+   - Method: **Squash and merge**
+   - Delete feature branch after merge
+
+### Release Workflow
+
+**When to create a release**: When `main` reaches a stable state with planned features complete.
+
+1. **Prepare release branch** from `main`
+   ```bash
+   git checkout main
+   git pull origin main
+   git checkout -b release/1.0.0
+   ```
+
+2. **Finalize release** (if needed)
+   ```bash
+   # Update version numbers (package.json, pyproject.toml, etc.)
+   # Update CHANGELOG.md
+   git commit -m "chore: prepare v1.0.0 release"
+   ```
+
+3. **Tag the release**
+   ```bash
+   git tag -a v1.0.0 -m "Release v1.0.0 - Description"
+   ```
+
+4. **Push release branch and tag**
+   ```bash
+   git push origin release/1.0.0 --tags
+   ```
+
+5. **Create GitHub Release**
+   - Tag: `v1.0.0`
+   - Title: `v1.0.0 - Release Name`
+   - Description: Release notes from CHANGELOG.md
+   - Attach binaries if applicable
+
+**Release Criteria**:
+- ✅ All planned features implemented
+- ✅ Manual testing confirms core functionality works
+- ✅ All CI checks pass
+- ✅ Documentation updated
+- ✅ CHANGELOG.md updated
+
+### Hotfix Workflow
+
+**For critical bugs in production releases**:
+
+1. **Create hotfix branch** from release branch
+   ```bash
+   git checkout release/1.0.0
+   git pull origin release/1.0.0
+   git checkout -b fix/critical-security-issue
+   ```
+
+2. **Fix the bug**
+   ```bash
+   git commit -m "fix: patch critical security vulnerability"
+   ```
+
+3. **Create new patch release**
+   ```bash
+   git checkout -b release/1.0.1
+   git merge fix/critical-security-issue
+   git tag -a v1.0.1 -m "Hotfix v1.0.1 - Security patch"
+   git push origin release/1.0.1 --tags
+   ```
+
+4. **Backport to main**
+   ```bash
+   git checkout main
+   git cherry-pick <commit-hash>
+   git push origin main
+   ```
+
+5. **Create GitHub Release** for the patch version
+
+### Pull Request Creation
 
 ### Pull Request Title
 
@@ -248,7 +345,7 @@ Reviewers should focus on:
 
 All PRs are merged using **Squash and Merge**:
 - Multiple commits are combined into one
-- Clean, linear history in `develop` and `main`
+- Clean, linear history in `main`
 - Commit message follows Conventional Commits
 
 ### Squash Commit Message
@@ -270,58 +367,25 @@ Implements real-time server status monitoring via WebSocket.
 - **Delete the feature branch** (automatic on GitHub)
 - **Close related issues** (automatic if using "Closes #123")
 
-## Release Process
+## Semantic Versioning
 
-### From `develop` to `main`
+We follow [Semantic Versioning 2.0.0](https://semver.org/):
 
-1. **Prepare for release**
-   - Ensure all intended features are merged to `develop`
-   - Verify all CI checks pass on `develop`
-   - Update version number if needed
+**Format**: `MAJOR.MINOR.PATCH` (e.g., `1.2.3`)
 
-2. **Create Release PR**
-   ```
-   From: develop
-   To: main
-   Title: "release: version X.Y.Z"
-   ```
+- **MAJOR** (X.0.0): Incompatible API changes (breaking changes)
+- **MINOR** (0.X.0): New features (backward-compatible)
+- **PATCH** (0.0.X): Bug fixes (backward-compatible)
 
-3. **Review and merge**
-   - All automated checks must pass
-   - Review changelog/release notes
-   - Squash and merge to `main`
+**Examples**:
+- `1.0.0` → `1.0.1`: Bug fix (patch)
+- `1.0.1` → `1.1.0`: New feature (minor)
+- `1.9.0` → `2.0.0`: Breaking change (major)
 
-4. **Create GitHub Release**
-   - Tag: `vX.Y.Z`
-   - Title: `Version X.Y.Z`
-   - Description: Release notes (features, fixes, breaking changes)
-   - Attach binaries if applicable
-
-5. **Post-release**
-   - Verify deployment
-   - Monitor for issues
-
-### Hotfix Process
-
-For urgent production fixes:
-
-1. **Create fix branch** from `develop` (not `main`)
-   ```bash
-   git checkout develop
-   git checkout -b fix/critical-bug
-   ```
-
-2. **Implement and test** the fix
-   - Keep changes minimal and focused
-   - Ensure tests cover the fix
-
-3. **Create PR to `develop`**
-   - Mark as urgent/hotfix
-   - Fast-track review if needed
-
-4. **After merge to `develop`**
-   - Immediately create release PR to `main`
-   - Create emergency GitHub Release
+**Pre-release versions**:
+- `1.0.0-alpha.1`: Alpha release
+- `1.0.0-beta.2`: Beta release
+- `1.0.0-rc.1`: Release candidate
 
 ## Branch Protection Rules
 
@@ -335,13 +399,16 @@ For urgent production fixes:
   - Build
 - ✅ Require conversation resolution before merging
 - ✅ Do not allow bypassing the above settings
-- ❌ Require approvals: Optional (rely on automated checks)
+- ❌ Require approvals: Optional (rely on automated checks for solo development)
 - ❌ Require linear history: No (we use squash merge)
 
-### `develop` Branch
+### `release/*` Branches
 
-- No branch protection (allows flexibility)
-- All merges still require passing CI checks (enforced via PR process)
+- ✅ Require pull request before merging (for hotfixes)
+- ✅ Do not allow branch deletion
+- ✅ Require tag immutability (tags cannot be deleted or overwritten)
+- ✅ Require status checks to pass (same as main)
+- ❌ Direct pushes: Allowed only for release preparation commits
 
 ## Continuous Integration (CI/CD)
 

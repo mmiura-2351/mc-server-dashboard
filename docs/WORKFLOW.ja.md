@@ -6,55 +6,72 @@
 
 ## ブランチ戦略
 
-Git FlowとGitHub Flowの**ハイブリッドアプローチ**を採用し、安定したリリースを保ちながら継続的な開発を行います。
+**Release Flow**を採用します。これはMicrosoftが開発した、安定したリリースを保ちながら継続的な開発を最適化するブランチ戦略です。
+
+**哲学**: `main`は活発な開発ブランチです。安定版リリースは長期保持される`release/x.y.z`ブランチで管理します。
+
+**参考**: [Microsoft Release Flow](https://devblogs.microsoft.com/devops/release-flow-how-we-do-branching-on-the-vsts-team/)
 
 ### ブランチタイプ
 
-#### `main` - 本番ブランチ
-- **目的**: 常にデプロイ可能、最新リリースを表す
+#### `main` - 活発な開発ブランチ
+- **目的**: 継続的統合と開発（基本機能が動作するレベル）
 - **保護**: ブランチ保護有効
 - **直接コミット**: ❌ 禁止
-- **マージ元**: `develop`のみ（プルリクエスト経由）
-- **タグ付け**: 全てのマージでGitHub Releaseを作成
+- **マージ元**: `feature/*`, `fix/*`, `refactor/*`, `docs/*`, `test/*`（プルリクエスト経由）
+- **状態**: 機能的であるべきだが、必ずしも本番環境対応済みではない
+- **CI**: マージ前に全チェックが通過必須
 
-#### `develop` - 開発ブランチ
-- **目的**: 進行中の開発の統合ブランチ
-- **保護**: ブランチ保護なし（柔軟性を重視）
-- **直接コミット**: ❌ 非推奨
-- **マージ元**: `feature/*`, `fix/*`, `refactor/*`など
-- **派生元**: 全ての機能ブランチの基点
+#### `release/x.y.z` - 安定版リリースブランチ
+- **目的**: 完全な機能保証を持つ本番環境対応の安定版
+- **保護**: ブランチ保護有効、タグは不変
+- **作成元**: 安定状態に達した`main`から作成
+- **寿命**: 長期保持（ホットフィックスのため維持）
+- **命名**: `release/1.0.0`, `release/1.1.0`, `release/2.0.0`
+- **タグ付け**: 各リリースブランチにタグ付け（`v1.0.0`, `v1.0.1`など）
+- **削除**: ❌ 決して削除しない（履歴保持のため）
+
+**例**:
+- `release/1.0.0` → タグ `v1.0.0`（初回安定版リリース）
+- `release/1.0.1` → タグ `v1.0.1`（1.0.0のホットフィックス）
+- `release/1.1.0` → タグ `v1.1.0`（新機能追加）
 
 #### `feature/*` - 機能ブランチ
 - **目的**: 新機能や機能強化
-- **派生元**: `develop`
+- **派生元**: `main`
 - **命名**: `feature/簡潔な説明` (例: `feature/user-authentication`)
 - **寿命**: 短命（マージ後削除）
+- **マージ先**: `main`（Squash and merge）
 - **例**: `feature/server-status-dashboard`
 
 #### `fix/*` - バグ修正ブランチ
-- **目的**: バグ修正（緊急修正を含む）
-- **派生元**: `develop`
+- **目的**: mainブランチのバグ修正
+- **派生元**: `main`（進行中の開発のバグ用）
 - **命名**: `fix/簡潔な説明` (例: `fix/login-error`)
 - **寿命**: 短命（マージ後削除）
-- **注意**: 緊急のhotfixでも`develop`から派生し、迅速なリリースを実施
+- **マージ先**: `main`
+- **注意**: リリース版のホットフィックスについては下記のホットフィックスワークフローを参照
 
 #### `refactor/*` - リファクタリングブランチ
 - **目的**: 機能変更を伴わないコードリファクタリング
-- **派生元**: `develop`
+- **派生元**: `main`
 - **命名**: `refactor/簡潔な説明`
 - **寿命**: 短命（マージ後削除）
+- **マージ先**: `main`
 
 #### `docs/*` - ドキュメントブランチ
 - **目的**: ドキュメントの更新
-- **派生元**: `develop`
+- **派生元**: `main`
 - **命名**: `docs/簡潔な説明`
 - **寿命**: 短命（マージ後削除）
+- **マージ先**: `main`
 
 #### `test/*` - テスト改善ブランチ
 - **目的**: テストの追加や改善
-- **派生元**: `develop`
+- **派生元**: `main`
 - **命名**: `test/簡潔な説明`
 - **寿命**: 短命（マージ後削除）
+- **マージ先**: `main`
 
 ### ブランチ命名規則
 
@@ -143,14 +160,14 @@ refactor(auth): simplify JWT token validation logic
 - bodyで「何を」「なぜ」を説明し、「どのように」は説明しない
 - footerでissueやPRを参照
 
-## プルリクエストワークフロー
+## 開発ワークフロー
 
-### プルリクエストの作成
+### 機能開発ワークフロー
 
-1. **ブランチを作成** (`develop`から)
+1. **ブランチを作成** (`main`から)
    ```bash
-   git checkout develop
-   git pull origin develop
+   git checkout main
+   git pull origin main
    git checkout -b feature/my-feature
    ```
 
@@ -160,10 +177,10 @@ refactor(auth): simplify JWT token validation logic
    git commit -m "feat(scope): description"
    ```
 
-3. **ブランチをdevelopと同期**
+3. **ブランチをmainと同期**
    ```bash
    git fetch origin
-   git rebase origin/develop
+   git rebase origin/main
    ```
 
 4. **リモートにプッシュ**
@@ -172,10 +189,90 @@ refactor(auth): simplify JWT token validation logic
    ```
 
 5. **GitHubでプルリクエストを作成**
-   - Base: `develop`
-   - Title: 明確で説明的な要約
+   - Base: `main`
+   - Title: 明確で説明的な要約（Conventional Commits形式）
    - Description: 文脈、変更内容、テストメモ
    - 関連issueをリンク
+
+6. **マージ**（CI通過とレビュー後）
+   - 方法: **Squash and merge**
+   - マージ後にfeatureブランチを削除
+
+### リリースワークフロー
+
+**リリースを作成するタイミング**: `main`が計画された機能を完成し、安定状態に達したとき。
+
+1. **リリースブランチを準備** (`main`から)
+   ```bash
+   git checkout main
+   git pull origin main
+   git checkout -b release/1.0.0
+   ```
+
+2. **リリースの最終調整**（必要に応じて）
+   ```bash
+   # バージョン番号を更新（package.json、pyproject.tomlなど）
+   # CHANGELOG.mdを更新
+   git commit -m "chore: prepare v1.0.0 release"
+   ```
+
+3. **リリースにタグ付け**
+   ```bash
+   git tag -a v1.0.0 -m "Release v1.0.0 - 説明"
+   ```
+
+4. **リリースブランチとタグをプッシュ**
+   ```bash
+   git push origin release/1.0.0 --tags
+   ```
+
+5. **GitHub Releaseを作成**
+   - Tag: `v1.0.0`
+   - Title: `v1.0.0 - リリース名`
+   - Description: CHANGELOG.mdからリリースノート
+   - 必要に応じてバイナリを添付
+
+**リリース基準**:
+- ✅ 計画されたすべての機能が実装済み
+- ✅ 手動テストで主要機能の動作を確認済み
+- ✅ すべてのCIチェックが通過
+- ✅ ドキュメント更新済み
+- ✅ CHANGELOG.md更新済み
+
+### ホットフィックスワークフロー
+
+**本番リリースの重大なバグ用**:
+
+1. **ホットフィックスブランチを作成** (releaseブランチから)
+   ```bash
+   git checkout release/1.0.0
+   git pull origin release/1.0.0
+   git checkout -b fix/critical-security-issue
+   ```
+
+2. **バグを修正**
+   ```bash
+   git commit -m "fix: patch critical security vulnerability"
+   ```
+
+3. **新しいパッチリリースを作成**
+   ```bash
+   git checkout -b release/1.0.1
+   git merge fix/critical-security-issue
+   git tag -a v1.0.1 -m "Hotfix v1.0.1 - セキュリティパッチ"
+   git push origin release/1.0.1 --tags
+   ```
+
+4. **mainにバックポート**
+   ```bash
+   git checkout main
+   git cherry-pick <commit-hash>
+   git push origin main
+   ```
+
+5. **パッチバージョンのGitHub Releaseを作成**
+
+### プルリクエストの作成
 
 ### プルリクエストタイトル
 
