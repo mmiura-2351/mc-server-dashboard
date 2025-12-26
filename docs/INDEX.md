@@ -50,14 +50,18 @@ All documents are available in both English and Japanese:
 **Purpose**: Defines coding conventions, naming rules, and code style guidelines.
 
 **Files**:
-- English: `CODING_STANDARDS.md` *(Coming soon)*
-- Japanese: `CODING_STANDARDS.ja.md` *(Coming soon)*
+- English: [CODING_STANDARDS.md](./CODING_STANDARDS.md)
+- Japanese: [CODING_STANDARDS.ja.md](./CODING_STANDARDS.ja.md)
 
-**Planned Topics**:
-- Language-specific code style
+**Key Topics**:
+- Python code style (Black, Ruff, type hints)
+- TypeScript/React conventions (Prettier, ESLint)
 - Naming conventions (variables, functions, classes, files)
-- Comment and documentation rules
+- Comment and documentation rules (docstrings, JSDoc)
 - Import ordering and organization
+- Testing conventions
+- Database and SQL naming
+- Automated enforcement (pre-commit hooks, CI)
 
 ---
 
@@ -107,11 +111,11 @@ All documents are available in both English and Japanese:
 
 For new contributors or team members, we recommend reading the documentation in this order:
 
-1. **PHILOSOPHY.md** - Understand the project's core values and principles
-2. **ARCHITECTURE.md** - Learn the overall system structure and technology stack
-3. **IMPLEMENTATION_GAP_ANALYSIS.md** - Understand differences between existing and proposed implementation
-4. **CODING_STANDARDS.md** - Familiarize yourself with code conventions *(Coming soon)*
-5. **WORKFLOW.md** - Understand the development process
+1. **[PHILOSOPHY.md](./PHILOSOPHY.md)** - Understand the project's core values and principles
+2. **[ARCHITECTURE.md](./ARCHITECTURE.md)** - Learn the overall system structure and technology stack
+3. **[IMPLEMENTATION_GAP_ANALYSIS.md](./IMPLEMENTATION_GAP_ANALYSIS.md)** - Understand differences between existing and proposed implementation
+4. **[CODING_STANDARDS.md](./CODING_STANDARDS.md)** - Familiarize yourself with code conventions
+5. **[WORKFLOW.md](./WORKFLOW.md)** - Understand the development process
 
 ---
 

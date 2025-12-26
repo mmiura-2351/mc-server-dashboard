@@ -50,14 +50,18 @@
 **目的**: コーディング規約、命名規則、コードスタイルガイドラインを定義します。
 
 **ファイル**:
-- 英語: `CODING_STANDARDS.md` *（準備中）*
-- 日本語: `CODING_STANDARDS.ja.md` *（準備中）*
+- 英語: [CODING_STANDARDS.md](./CODING_STANDARDS.md)
+- 日本語: [CODING_STANDARDS.ja.md](./CODING_STANDARDS.ja.md)
 
-**予定トピック**:
-- 言語別コードスタイル
+**主なトピック**:
+- Pythonコードスタイル（Black、Ruff、型ヒント）
+- TypeScript/React規約（Prettier、ESLint）
 - 命名規則（変数、関数、クラス、ファイル）
-- コメントとドキュメントのルール
+- コメントとドキュメントのルール（docstring、JSDoc）
 - インポートの順序と整理
+- テスト規約
+- データベースとSQL命名
+- 自動強制（pre-commitフック、CI）
 
 ---
 
@@ -107,11 +111,11 @@
 
 新しいコントリビューターやチームメンバーには、以下の順序でドキュメントを読むことをお勧めします：
 
-1. **PHILOSOPHY.md** - プロジェクトの中核的な価値観と原則を理解する
-2. **ARCHITECTURE.md** - システム全体の構造と技術スタックを学ぶ
-3. **IMPLEMENTATION_GAP_ANALYSIS.md** - 既存実装と提案実装の違いを理解する
-4. **CODING_STANDARDS.md** - コード規約に慣れる *（準備中）*
-5. **WORKFLOW.md** - 開発プロセスを理解する
+1. **[PHILOSOPHY.md](./PHILOSOPHY.md)** - プロジェクトの中核的な価値観と原則を理解する
+2. **[ARCHITECTURE.md](./ARCHITECTURE.md)** - システム全体の構造と技術スタックを学ぶ
+3. **[IMPLEMENTATION_GAP_ANALYSIS.md](./IMPLEMENTATION_GAP_ANALYSIS.md)** - 既存実装と提案実装の違いを理解する
+4. **[CODING_STANDARDS.md](./CODING_STANDARDS.md)** - コード規約に慣れる
+5. **[WORKFLOW.md](./WORKFLOW.md)** - 開発プロセスを理解する
 
 ---
 
