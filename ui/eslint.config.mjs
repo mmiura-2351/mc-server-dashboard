@@ -14,12 +14,22 @@ const compat = new FlatCompat({
 });
 
 export default [
+  {
+    ignores: [
+      '.next/*',
+      'node_modules/*',
+      'out/*',
+      'coverage/*',
+      '.vitest/*',
+    ],
+  },
   ...compat.extends(
     'next/core-web-vitals',
     'plugin:@typescript-eslint/recommended',
     'prettier',
   ),
   {
+    files: ['**/*.{js,jsx,ts,tsx}'],
     plugins: {
       '@typescript-eslint': typescriptEslint,
     },
