@@ -8,7 +8,7 @@ interface ApiStatus {
   environment: string;
 }
 
-export default function Home(): JSX.Element {
+export default function Home() {
   const [apiStatus, setApiStatus] = useState<ApiStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

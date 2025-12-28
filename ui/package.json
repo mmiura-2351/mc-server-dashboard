@@ -16,33 +16,34 @@
     "prepare": "cd .. && husky ui/.husky || true"
   },
   "dependencies": {
-    "react": "^19.2.3",
-    "react-dom": "^19.2.3",
-    "next": "^16.1.1",
-    "neverthrow": "^6.2.2",
     "dompurify": "^3.3.1",
-    "isomorphic-dompurify": "^2.18.0"
+    "isomorphic-dompurify": "^2.18.0",
+    "neverthrow": "^6.2.2",
+    "next": "^16.1.1",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.1",
+    "@types/dompurify": "^3.2.0",
     "@types/node": "^25.0.3",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
-    "@types/dompurify": "^3.2.0",
     "@typescript-eslint/eslint-plugin": "^8.18.1",
     "@typescript-eslint/parser": "^8.18.1",
     "@vitejs/plugin-react": "^4.3.4",
+    "@vitest/coverage-v8": "^4.0.16",
     "@vitest/ui": "^4.0.16",
     "eslint": "^9.39.2",
     "eslint-config-next": "^16.1.1",
     "eslint-config-prettier": "^10.0.1",
+    "husky": "^9.1.7",
+    "jsdom": "^25.0.1",
+    "lint-staged": "^15.3.0",
     "prettier": "^3.7.4",
     "typescript": "^5.9.3",
-    "vitest": "^4.0.16",
-    "@testing-library/react": "^16.3.1",
-    "@testing-library/jest-dom": "^6.9.1",
-    "jsdom": "^25.0.1",
-    "husky": "^9.1.7",
-    "lint-staged": "^15.3.0"
+    "vitest": "^4.0.16"
   },
   "lint-staged": {
     "*.{ts,tsx}": [
