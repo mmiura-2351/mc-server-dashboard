@@ -1,0 +1,135 @@
+name: Backend CI
+
+on:
+  push:
+    branches: ['**']
+    paths:
+      - 'api/**'
+      - '.github/workflows/backend-ci.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'api/**'
+      - '.github/workflows/backend-ci.yml'
+
+jobs:
+  lint:
+    name: Lint (Ruff)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./api
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Install dependencies
+        run: uv pip install --system -e ".[dev]"
+
+      - name: Run Ruff linter
+        run: ruff check .
+
+      - name: Run Ruff formatter check
+        run: ruff format --check .
+
+  typecheck:
+    name: Type Check (mypy)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./api
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Install dependencies
+        run: uv pip install --system -e ".[dev]"
+
+      - name: Run mypy
+        run: mypy src/
+
+  test:
+    name: Test (pytest)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./api
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_DB: testdb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql+asyncpg://testuser:testpass@localhost:5432/testdb
+      SECRET_KEY: test-secret-key-for-ci
+      PYTHONPATH: ${{ github.workspace }}/api/src
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Install dependencies
+        run: uv pip install --system -e ".[dev]"
+
+      - name: Run tests with coverage
+        run: pytest --cov --cov-report=xml --cov-report=term-missing
+
+      - name: Check coverage threshold
+        run: |
+          COVERAGE=$(python -c "import xml.etree.ElementTree as ET; print(ET.parse('coverage.xml').getroot().attrib['line-rate'])")
+          COVERAGE_PERCENT=$(python -c "print(f'{float($COVERAGE) * 100:.2f}')")
+          echo "Coverage: ${COVERAGE_PERCENT}%"
+          if (( $(echo "$COVERAGE < 0.75" | bc -l) )); then
+            echo "Error: Coverage ${COVERAGE_PERCENT}% is below 75% threshold"
+            exit 1
+          fi
+
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v5
+        if: github.event_name == 'pull_request'
+        with:
+          files: ./api/coverage.xml
+          flags: backend
+          fail_ci_if_error: false
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

@@ -1,0 +1,41 @@
+# Pre-commit hooks for backend (Python)
+# Install: pip install pre-commit && pre-commit install
+
+repos:
+  # Ruff - Fast Python linter and formatter
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.5
+    hooks:
+      # Run the linter
+      - id: ruff
+        args: [--fix]
+        files: ^api/
+      # Run the formatter
+      - id: ruff-format
+        files: ^api/
+
+  # mypy - Static type checker
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.13.0
+    hooks:
+      - id: mypy
+        files: ^api/src/
+        args: [--config-file=api/pyproject.toml]
+        additional_dependencies:
+          - types-all
+
+  # General hooks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        files: ^api/
+      - id: end-of-file-fixer
+        files: ^api/
+      - id: check-yaml
+      - id: check-toml
+      - id: check-json
+      - id: check-added-large-files
+        args: [--maxkb=1000]
+      - id: check-merge-conflict
+      - id: detect-private-key

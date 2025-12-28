@@ -384,6 +384,183 @@ Recommended extensions:
 
 ---
 
+## CI Environment Setup
+
+### Pre-commit Hooks
+
+Pre-commit hooks ensure code quality before commits. They run linters, formatters, and type checkers automatically.
+
+#### Automated Setup (Recommended)
+
+Run the setup script from the project root:
+
+```bash
+./scripts/setup-hooks.sh
+```
+
+This script will:
+1. Install and configure backend pre-commit hooks (Ruff, mypy)
+2. Install and configure frontend husky hooks (ESLint, Prettier)
+3. Run initial checks on all files
+
+#### Manual Setup
+
+**Backend (pre-commit):**
+
+```bash
+# Install pre-commit
+pip install pre-commit
+
+# Install git hooks
+pre-commit install
+
+# Run on all files (optional)
+pre-commit run --all-files
+```
+
+**Frontend (husky + lint-staged):**
+
+```bash
+cd ui
+
+# Install dependencies (includes husky and lint-staged)
+npm install
+
+# Initialize husky
+npm run prepare
+```
+
+### What Gets Checked
+
+**Backend (on commit):**
+- Ruff linter and formatter (Python code style)
+- mypy type checker (static type checking)
+- General file checks (trailing whitespace, YAML/JSON syntax)
+
+**Frontend (on commit):**
+- ESLint (TypeScript/React linting)
+- Prettier (code formatting)
+- Only staged files are checked
+
+### GitHub Actions CI
+
+All pushes and pull requests trigger automated CI checks:
+
+#### Backend CI (`backend-ci.yml`)
+- Linting with Ruff
+- Type checking with mypy
+- Unit tests with pytest
+- Coverage check (≥75% required)
+
+#### Frontend CI (`frontend-ci.yml`)
+- Linting with ESLint
+- Format checking with Prettier
+- Type checking with TypeScript
+- Unit tests with Vitest
+- Coverage check (≥75% required)
+- Build verification with Next.js
+
+#### Docker CI (`docker-ci.yml`)
+- Docker Compose build verification
+- Service health checks (API, UI, PostgreSQL)
+- Dockerfile linting with hadolint
+
+### Running CI Checks Locally
+
+**Backend:**
+
+```bash
+cd api
+
+# Linting
+ruff check .
+
+# Formatting check
+ruff format --check .
+
+# Type checking
+mypy src/
+
+# Tests with coverage
+pytest --cov --cov-report=term-missing
+```
+
+**Frontend:**
+
+```bash
+cd ui
+
+# Linting
+npm run lint
+
+# Format checking
+npm run format:check
+
+# Type checking
+npm run type-check
+
+# Tests with coverage
+npm run test:coverage
+
+# Build
+npm run build
+```
+
+**Docker:**
+
+```bash
+# Build and verify all services
+docker compose build
+docker compose up -d
+
+# Check health
+curl http://localhost:8000/health
+curl http://localhost:3000
+
+# View logs
+docker compose logs
+
+# Cleanup
+docker compose down -v
+```
+
+### Coverage Requirements
+
+- **Target**: 95% (aspirational goal from ARCHITECTURE.md)
+- **CI Minimum**: 75% (enforced in GitHub Actions)
+- **Current Reality**: 75-80% (per CLAUDE.md)
+
+Coverage below 75% will cause CI to fail.
+
+### Troubleshooting CI
+
+**Pre-commit hooks failing:**
+
+```bash
+# Update hooks to latest version
+pre-commit autoupdate
+
+# Clear cache and retry
+pre-commit clean
+pre-commit run --all-files
+```
+
+**Husky not running:**
+
+```bash
+cd ui
+rm -rf .husky
+npm run prepare
+```
+
+**CI failing but passes locally:**
+
+- Ensure you've committed all changes
+- Check that dependencies in `pyproject.toml` and `package.json` are up to date
+- Verify `.github/workflows/*.yml` syntax
+
+---
+
 ## Next Steps
 
 After setting up the development environment:

@@ -384,6 +384,183 @@ docker compose up -d
 
 ---
 
+## CI環境のセットアップ
+
+### Pre-commitフック
+
+Pre-commitフックは、コミット前にコード品質を確保します。リンター、フォーマッター、型チェッカーを自動的に実行します。
+
+#### 自動セットアップ（推奨）
+
+プロジェクトルートからセットアップスクリプトを実行:
+
+```bash
+./scripts/setup-hooks.sh
+```
+
+このスクリプトは以下を実行します:
+1. バックエンドのpre-commitフック（Ruff、mypy）をインストールと設定
+2. フロントエンドのhuskyフック（ESLint、Prettier）をインストールと設定
+3. 全ファイルに対して初回チェックを実行
+
+#### 手動セットアップ
+
+**バックエンド（pre-commit）:**
+
+```bash
+# pre-commitをインストール
+pip install pre-commit
+
+# gitフックをインストール
+pre-commit install
+
+# 全ファイルに対して実行（オプション）
+pre-commit run --all-files
+```
+
+**フロントエンド（husky + lint-staged）:**
+
+```bash
+cd ui
+
+# 依存関係をインストール（huskyとlint-stagedを含む）
+npm install
+
+# huskyを初期化
+npm run prepare
+```
+
+### チェック内容
+
+**バックエンド（コミット時）:**
+- Ruffリンター・フォーマッター（Pythonコードスタイル）
+- mypy型チェッカー（静的型チェック）
+- 一般的なファイルチェック（末尾の空白、YAML/JSON構文）
+
+**フロントエンド（コミット時）:**
+- ESLint（TypeScript/Reactリント）
+- Prettier（コードフォーマット）
+- ステージされたファイルのみをチェック
+
+### GitHub Actions CI
+
+全てのプッシュとプルリクエストで自動CIチェックがトリガーされます:
+
+#### バックエンドCI（`backend-ci.yml`）
+- Ruffによるリント
+- mypyによる型チェック
+- pytestによるユニットテスト
+- カバレッジチェック（≥75%必須）
+
+#### フロントエンドCI（`frontend-ci.yml`）
+- ESLintによるリント
+- Prettierによるフォーマットチェック
+- TypeScriptによる型チェック
+- Vitestによるユニットテスト
+- カバレッジチェック（≥75%必須）
+- Next.jsによるビルド検証
+
+#### Docker CI（`docker-ci.yml`）
+- Docker Composeビルド検証
+- サービスヘルスチェック（API、UI、PostgreSQL）
+- hadolintによるDockerfileリント
+
+### CIチェックをローカルで実行
+
+**バックエンド:**
+
+```bash
+cd api
+
+# リント
+ruff check .
+
+# フォーマットチェック
+ruff format --check .
+
+# 型チェック
+mypy src/
+
+# カバレッジ付きテスト
+pytest --cov --cov-report=term-missing
+```
+
+**フロントエンド:**
+
+```bash
+cd ui
+
+# リント
+npm run lint
+
+# フォーマットチェック
+npm run format:check
+
+# 型チェック
+npm run type-check
+
+# カバレッジ付きテスト
+npm run test:coverage
+
+# ビルド
+npm run build
+```
+
+**Docker:**
+
+```bash
+# 全サービスをビルド・検証
+docker compose build
+docker compose up -d
+
+# ヘルスチェック
+curl http://localhost:8000/health
+curl http://localhost:3000
+
+# ログ確認
+docker compose logs
+
+# クリーンアップ
+docker compose down -v
+```
+
+### カバレッジ要件
+
+- **目標**: 95%（ARCHITECTURE.mdからの理想的な目標）
+- **CI最小値**: 75%（GitHub Actionsで強制）
+- **現実**: 75-80%（CLAUDE.mdによる）
+
+カバレッジが75%未満の場合、CIは失敗します。
+
+### CIのトラブルシューティング
+
+**Pre-commitフックが失敗する:**
+
+```bash
+# フックを最新バージョンに更新
+pre-commit autoupdate
+
+# キャッシュをクリアして再試行
+pre-commit clean
+pre-commit run --all-files
+```
+
+**Huskyが実行されない:**
+
+```bash
+cd ui
+rm -rf .husky
+npm run prepare
+```
+
+**CIが失敗するがローカルでは成功する:**
+
+- 全ての変更をコミットしたことを確認
+- `pyproject.toml`と`package.json`の依存関係が最新であることを確認
+- `.github/workflows/*.yml`の構文を検証
+
+---
+
 ## 次のステップ
 
 開発環境のセットアップ後:
