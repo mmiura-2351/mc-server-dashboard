@@ -5,7 +5,7 @@ WORKDIR /app
 # Install essential packages only (minimal for development)
 RUN pip install --no-cache-dir \
     fastapi \
-    uvicorn[standard] \
+    "uvicorn[standard]" \
     httpx \
     pytest \
     pytest-asyncio || true

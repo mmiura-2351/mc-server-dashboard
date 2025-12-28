@@ -13,7 +13,7 @@ dependencies = [
     "pydantic-settings>=2.12.0",
     "python-jose[cryptography]>=3.3.0",
     "passlib[bcrypt]>=1.7.4",
-    "modern-rcon>=1.5.0",
+    "rcon>=2.4.9",
     "docker>=7.1.0",
     "psutil>=7.2.0",
     "aiofiles>=25.1.0",
@@ -88,7 +88,7 @@ warn_no_return = true
 
 [[tool.mypy.overrides]]
 module = [
-    "modern_rcon",
+    "rcon",
     "docker",
     "psutil",
 ]
