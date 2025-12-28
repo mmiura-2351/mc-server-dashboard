@@ -1,7 +1,6 @@
 /** @type {import('eslint').Linter.Config} */
 module.exports = {
   extends: [
-    'next/core-web-vitals',
     'plugin:@typescript-eslint/recommended',
     'prettier',
   ],
@@ -9,11 +8,17 @@ module.exports = {
   parserOptions: {
     ecmaVersion: 2020,
     sourceType: 'module',
+    project: './tsconfig.json',
     ecmaFeatures: {
       jsx: true,
     },
   },
   plugins: ['@typescript-eslint'],
+  env: {
+    browser: true,
+    es2020: true,
+    node: true,
+  },
   rules: {
     '@typescript-eslint/explicit-function-return-type': 'warn',
     '@typescript-eslint/no-unused-vars': [
@@ -37,4 +42,5 @@ module.exports = {
       },
     ],
   },
+  ignorePatterns: ['.next', 'node_modules', 'out', 'coverage', '.vitest'],
 };
