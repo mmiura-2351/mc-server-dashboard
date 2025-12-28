@@ -173,11 +173,9 @@ EOF
 
 ## Common Pitfalls to Avoid
 
-1. **DO NOT create implementation-specific documentation** (e.g., detailed setup guides) until implementation begins
-2. **DO NOT assume code exists** - treat all code examples as specifications
-3. **DO NOT reference the external repositories** for design decisions
-4. **DO NOT modify only one language version** - always update pairs
-5. **DO NOT add `error` state to server state machine** - this was explicitly rejected (see ARCHITECTURE.md section 4)
+1. **DO NOT assume code exists** - treat all code examples as specifications
+2. **DO NOT reference the external repositories** for design decisions
+3. **DO NOT modify only one language version** - always update pairs
 
 ## Philosophy and Design Principles
 
