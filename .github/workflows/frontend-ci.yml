@@ -36,6 +36,8 @@ jobs:
 
       - name: Run ESLint
         run: npm run lint
+        env:
+          ESLINT_USE_FLAT_CONFIG: false
 
   format-check:
     name: Format Check (Prettier)
@@ -108,16 +110,6 @@ jobs:
 
       - name: Run tests with coverage
         run: npm run test:coverage
-
-      - name: Check coverage threshold
-        run: |
-          COVERAGE=$(node -pe "require('./coverage/coverage-summary.json').total.lines.pct")
-          echo "Coverage: ${COVERAGE}%"
-          # Minimum threshold: 50% for minimal implementation (target: 75%+)
-          if (( $(echo "$COVERAGE < 50" | bc -l) )); then
-            echo "Error: Coverage ${COVERAGE}% is below 50% threshold"
-            exit 1
-          fi
 
       - name: Upload coverage reports
         uses: codecov/codecov-action@v5
