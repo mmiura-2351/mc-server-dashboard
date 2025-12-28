@@ -330,12 +330,56 @@ class DockerOutOfDockerStrategy(ServerLaunchStrategy):
 ```
 
 **選択ロジック**:
-- サーバーごとの設定 OR グローバルアプリケーション設定
+- **システム全体の設定**: アプリケーション全体で1つの起動戦略を使用
+- 環境変数で設定: `DEFAULT_LAUNCH_STRATEGY=host|dind|dood`
+- 全サーバーが同じ戦略を使用（初期実装ではサーバーごとの選択なし）
+- **戦略変更**: 将来機能（DBでフラグ変更のみ、次回サーバー起動時に適用）
+
+**Java互換性**:
 - Java互換性マトリックスはHostProcessStrategyにのみ適用
+- Docker戦略（DinD/DooD）は `itzg/minecraft-server` イメージに含まれるJavaを使用
 
 ---
 
-### 2. 統一スナップショットシステム（バージョン管理）
+### 2. Java互換性マトリックス（HostProcessStrategyのみ）
+
+**目的**: ホストプロセスとして起動するMinecraftサーバーのJavaバージョン自動選択
+
+**Minecraftバージョン → Javaバージョン対応表**:
+```
+Minecraftバージョン    | 必要なJavaバージョン
+----------------------|---------------------
+~ 1.7.9               | Java 7
+1.7.10 ~ 1.16.5       | Java 8
+1.17 ~ 1.17.1         | Java 16
+1.18 ~ 1.20.4         | Java 17
+1.20.5 ~              | Java 21
+```
+
+**Java検出ロジック**（HostProcessStrategyのみ）:
+1. まず `.env` 設定を確認:
+   ```bash
+   JAVA_8_PATH=/usr/lib/jvm/java-8-openjdk-amd64/bin/java
+   JAVA_16_PATH=/usr/lib/jvm/java-16-openjdk-amd64/bin/java
+   JAVA_17_PATH=/usr/lib/jvm/java-17-openjdk-amd64/bin/java
+   JAVA_21_PATH=/usr/lib/jvm/java-21-openjdk-amd64/bin/java
+   ```
+2. `.env` にない場合、標準パスを確認:
+   ```bash
+   /usr/lib/jvm/java-{7,8,16,17,21}-openjdk-amd64/bin/java
+   ```
+3. API起動時に全Javaバージョンの検出を実行
+4. 検証用のJava検出APIエンドポイントを提供
+
+**エラーハンドリング**:
+- 必要なJavaバージョンが見つからない場合 → サーバー作成リクエスト時にエラー返却
+- 異なるJavaバージョンへのフォールバックなし（互換性問題のため）
+
+**注意**: Paper/Forge/FabricもVanillaと同じJava要件
+
+---
+
+### 3. 統一スナップショットシステム（バージョン管理）
 
 **目的**: ファイルとワールドバックアップの共通バージョニング
 
@@ -363,7 +407,52 @@ Snapshot (
 
 ---
 
-### 3. 設定可能な制限付きバックアップスケジューラー
+### 4. サーバーステータスステートマシン
+
+**目的**: 明確なサーバーライフサイクル状態と許可される操作を定義
+
+**サーバー状態**:
+```
+- stopped     : サーバーは停止中
+- starting    : サーバーは起動中（プロセス起動 → 準備完了）
+- running     : サーバーは実行中（プレイヤー接続可能）
+- stopping    : サーバーはシャットダウン中
+- unknown     : サーバー状態が判定不可（一時的、再検出を行う）
+```
+
+**状態遷移**:
+```
+stopped  → starting   (start操作)
+starting → running    (起動完了検出)
+starting → stopped    (起動失敗 または force=True でのstop操作)
+starting → unknown    (プロセス追跡不可)
+running  → stopping   (stop操作)
+running  → unknown    (プロセス追跡不可)
+stopping → stopped    (シャットダウン完了検出)
+stopping → unknown    (プロセス追跡不可)
+unknown  → any state  (状態再検出)
+```
+
+**状態ごとの許可操作**:
+
+| 状態      | start | stop | restart | RCON | 設定変更 | 削除 |
+|-----------|-------|------|---------|------|----------|------|
+| stopped   | ✅    | ❌   | ❌      | ❌   | ✅       | ✅   |
+| starting  | ❌    | ✅*  | ❌      | ❌   | ❌       | ❌   |
+| running   | ❌    | ✅   | ✅      | ✅   | ❌       | ❌   |
+| stopping  | ❌    | ❌   | ❌      | ❌   | ❌       | ❌   |
+| unknown   | ❌    | ❌   | ❌      | ❌   | ❌       | ❌   |
+
+\* `starting` 状態でのstopは `force=True` パラメータが必要
+
+**注意事項**:
+- `unknown` は一時的な状態で、状態再検出により自動的に解決される
+- `error` 状態なし（失敗は `stopped` 状態となり、エラーは別途ログに記録）
+- 外部からのシャットダウン（Dockerコマンド、プロセスキル、ゲーム内 `/stop`）をサポート
+
+---
+
+### 5. 設定可能な制限付きバックアップスケジューラー
 
 **3層制限システム**:
 
@@ -379,14 +468,30 @@ if user_limit.max_backups > app_config.MAX_BACKUPS:
     raise ValidationError("アプリケーション制限を超えています")
 ```
 
+**バックアップタイミング**:
+- **間隔ベース**: Minecraftサーバー起動後、N時間ごとにバックアップ
+- 例: サーバー10:00 AM起動、間隔=6h → 4:00 PM、10:00 PMにバックアップ
+- Minecraftサーバー再起動時にタイマーリセット
+
+**API再起動時の動作**:
+- Minecraftサーバーが実行中のままAPIが再起動した場合:
+  - API起動時刻からタイマーを再計算
+  - 例: APIが3:00 PMに再起動（間隔=6h） → 次回バックアップは9:00 PM
+- API停止中のバックアップは実行されない（次の間隔までスキップ）
+
+**バックアップ失敗時の処理**:
+- 失敗したバックアップはデータベースに記録（`Snapshot` テーブルに `status: failed`）
+- 失敗理由をmetadataに保存
+- リトライロジックなし（次のスケジュール間隔まで待機）
+
 **データベース永続化スケジューラー**:
-- API再起動を生き延びる
-- パフォーマンスのためのインメモリキャッシュ
-- 実行のためのバックグラウンドタスク
+- 設定を `BackupSchedule` テーブルに保存
+- 実行用のインメモリタイマー
+- バックグラウンドタスクでバックアップをチェック・実行
 
 ---
 
-### 4. グループ管理（OP/ホワイトリスト）
+### 6. グループ管理（OP/ホワイトリスト）
 
 **目的**: 集中型プレイヤー権限管理
 
@@ -410,7 +515,7 @@ ServerGroup (
 
 ---
 
-### 5. Minecraftバージョンキャッシュ
+### 7. Minecraftバージョンキャッシュ
 
 **目的**: 繰り返しの外部API呼び出しを回避
 
@@ -432,7 +537,7 @@ MinecraftVersion (
 
 ---
 
-### 6. ユーザー承認ワークフロー
+### 8. ユーザー承認ワークフロー
 
 **フロー**:
 1. ユーザー登録 → `is_approved = False`
@@ -451,7 +556,7 @@ User (
 
 ---
 
-### 7. リフレッシュトークン無効化
+### 9. リフレッシュトークン無効化
 
 **セキュリティ機能**:
 - データベースにリフレッシュトークンを保存
@@ -470,7 +575,112 @@ RefreshToken (
 
 ---
 
-### 8. セキュリティ実装
+### 10. 権限ベースアクセス制御（PBAC）
+
+**目的**: ロールベースのデフォルトとユーザー固有のオーバーライドによる細かい権限システム
+
+**権限計算**: `(ロール権限 ∪ ユーザー付与) - ユーザー拒否`
+
+**権限命名規則**: `category.action[.scope]`
+
+**合計権限数**: 7カテゴリで38権限
+
+**権限リスト**:
+
+**1. servers（サーバー管理） - 8権限**
+```
+servers.create          - 新規サーバー作成
+servers.view            - 自分のサーバー閲覧
+servers.view_all        - 全サーバー閲覧（管理者）
+servers.update          - サーバー設定変更
+servers.delete          - サーバー削除
+servers.start           - サーバー起動
+servers.stop            - サーバー停止（force=Trueでの強制停止を含む）
+servers.restart         - サーバー再起動
+```
+
+**2. rcon（RCON実行） - 1権限**
+```
+rcon.execute            - 他人のサーバーでRCONコマンド実行
+                          （注意: 自分のサーバーでは常に実行可能）
+```
+
+**3. files（ファイル管理） - 5権限**
+```
+files.view              - ファイル閲覧
+files.edit              - ファイル編集
+files.upload            - ファイルアップロード
+files.download          - ファイルダウンロード
+files.delete            - ファイル削除
+```
+
+**4. backups（バックアップ管理） - 6権限**
+```
+backups.create          - 手動バックアップ作成
+backups.view            - バックアップ一覧閲覧
+backups.restore         - バックアップから復元
+backups.delete          - バックアップ削除
+backups.schedule        - 自動バックアップスケジュール設定
+backups.download        - バックアップファイルダウンロード
+```
+
+**5. groups（グループ管理） - 6権限**
+```
+groups.create           - 新規グループ作成
+groups.view             - グループ閲覧
+groups.update           - グループ設定編集
+groups.delete           - グループ削除
+groups.attach           - サーバーにグループ適用
+groups.detach           - サーバーからグループ解除
+```
+
+**6. users（ユーザー管理） - 8権限**
+```
+users.view              - ユーザー一覧閲覧
+users.create            - 新規ユーザー作成
+users.update            - ユーザー情報編集
+users.delete            - ユーザー削除
+users.approve           - 新規ユーザー登録の承認
+users.change_role       - ロール変更
+users.grant_permission  - 個別権限をユーザーに付与
+users.deny_permission   - 個別権限をユーザーから拒否
+```
+
+**7. system（システム設定） - 4権限**
+```
+system.view_settings    - システム設定閲覧
+system.update_settings  - システム設定変更
+system.view_health      - ヘルスチェック情報閲覧
+system.manage_limits    - 3層制限設定の管理
+```
+
+**データベーススキーマ**:
+```sql
+-- 権限定義
+permissions (
+  id, category, action, scope, description
+)
+
+-- ロールデフォルト権限
+role_permissions (
+  id, role ENUM('admin', 'operator', 'user'), permission_id FK
+)
+
+-- ユーザー固有の権限付与/拒否
+user_permissions (
+  id, user_id FK, permission_id FK,
+  is_granted BOOLEAN  -- true: 付与, false: 拒否
+)
+```
+
+**注意事項**:
+- `is_dangerous` フラグは使用しない（設計から削除）
+- 権限計算により、ユーザーが自分自身の権限を変更することを防止
+- 監査ログはすべての権限変更に適用（別途実装）
+
+---
+
+### 11. セキュリティ実装
 
 #### a) パストラバーサル防止
 ```python
@@ -490,6 +700,21 @@ def validate_archive(archive_path: Path) -> None:
     # シンボリックリンク、デバイスファイル、絶対パスを拒否
 ```
 
+**設定可能な制限**（環境変数経由）:
+```bash
+ARCHIVE_MAX_SIZE_MB=500                    # アーカイブファイル最大サイズ
+ARCHIVE_MAX_FILES=10000                    # アーカイブ内最大ファイル数
+ARCHIVE_MAX_FILE_SIZE_MB=500               # 個別ファイル最大サイズ
+ARCHIVE_MAX_COMPRESSION_RATIO=100          # 最大圧縮率（zip爆弾検出）
+```
+
+**拒否されるファイルタイプ**（セキュリティ考慮に基づき決定予定）:
+- シンボリックリンク
+- デバイスファイル
+- 絶対パス（`/` プレフィックス）
+- 親ディレクトリ参照（`../`）
+- その他追加タイプ（TBD）
+
 #### c) 入力サニタイゼーション（フロントエンド）
 ```typescript
 class InputSanitizer {
@@ -503,7 +728,7 @@ class InputSanitizer {
 
 ---
 
-### 9. 国際化（i18n）
+### 12. 国際化（i18n）
 
 **サポート言語**: 英語、日本語
 
@@ -515,7 +740,7 @@ class InputSanitizer {
 
 ---
 
-### 10. 接続監視（最小限）
+### 13. 接続監視（最小限）
 
 **目的**: 基本的なAPIヘルスチェック
 
@@ -527,7 +752,7 @@ class InputSanitizer {
 
 ---
 
-### 11. WebベースのRCON実行
+### 14. WebベースのRCON実行
 
 **目的**: Web UIからMinecraftサーバーコマンドを実行
 
@@ -550,7 +775,7 @@ class InputSanitizer {
 
 ---
 
-### 12. サーバーログ取得（Strategy Pattern）
+### 15. サーバーログ取得（Strategy Pattern）
 
 **目的**: 最小限のオーバーヘッドでWeb UIにMinecraftサーバーログを表示
 
@@ -585,7 +810,7 @@ class LogRetrievalStrategy(ABC):
 
 ---
 
-### 13. 統一エラーレスポンス形式
+### 16. 統一エラーレスポンス形式
 
 **目的**: 全エンドポイントで一貫したAPIエラーハンドリング
 
@@ -617,6 +842,25 @@ class LogRetrievalStrategy(ABC):
 - 404: `NOT_FOUND`
 - 409: `CONFLICT`
 - 500: `INTERNAL_ERROR`, `EXTERNAL_SERVICE_ERROR`
+
+**`details` フィールド構造**:
+- 機能ごとに標準化（実装時に定義）
+- 例構造:
+  ```json
+  // VALIDATION_ERROR
+  "details": {
+    "field": "backup_interval",
+    "constraint": "must be >= 1 hour",
+    "provided": "30 minutes"
+  }
+
+  // AUTHORIZATION_ERROR
+  "details": {
+    "required_permission": "servers.delete",
+    "user_role": "operator"
+  }
+  ```
+- 実装フェーズでの決定（全エラーコードで事前定義しない）
 
 **フロントエンドハンドリング**:
 - TypeScriptインターフェースによる型安全なエラー解析
@@ -673,12 +917,52 @@ class LogRetrievalStrategy(ABC):
 
 ---
 
+## グレースフルシャットダウン手順
+
+**目的**: データ損失や破損なしにAPIのクリーンなシャットダウンを保証
+
+### APIシャットダウン動作
+
+**1. Minecraftサーバー**:
+- **実行を継続**: APIシャットダウン中にMinecraftサーバーは停止されない
+- プロセス/コンテナは独立して実行を継続
+- API再起動後に実行中のサーバーに再接続
+- 理由: プレイヤーへの影響を最小限に抑える
+
+**2. 進行中のバックアップ**:
+- **完了を待機**: APIは実行中のバックアップの完了を待つ
+- タイムアウト: 5分（`BACKUP_SHUTDOWN_TIMEOUT_SECONDS`で設定可能）
+- タイムアウト超過時: 強制シャットダウン、バックアップはデータベースで`failed`としてマーク
+- 部分的なバックアップファイルは次回起動時にクリーンアップ
+
+**3. データベース接続**:
+- **明示的なクリーンアップ**: すべてのPostgreSQL接続を適切に閉じる
+- 接続プールをグレースフルにシャットダウン
+- 孤立した接続やトランザクションロックがないことを保証
+
+**実装**:
+```python
+@app.on_event("shutdown")
+async def shutdown_event():
+    # 1. 進行中のバックアップを待つ（タイムアウト付き）
+    await backup_service.wait_for_completion(timeout=300)
+
+    # 2. データベース接続を閉じる
+    await database.disconnect()
+
+    # 3. リソースをクリーンアップ
+    await cleanup_temp_files()
+```
+
+**注意**: Minecraftサーバーは実行を継続するため、ホストシャットダウン前に必要に応じて手動で停止する必要があります
+
+---
+
 ## デプロイメントアーキテクチャ
 
 ### 開発環境
 
 ```yaml
-version: '3.8'
 services:
   postgres:
     image: postgres:16
@@ -780,14 +1064,25 @@ MAX_BACKUP_INTERVAL_HOURS=168
 # 起動戦略
 DEFAULT_LAUNCH_STRATEGY=host  # host|dind|dood
 
-# Javaパス（host戦略使用時）
-JAVA_8_PATH=/usr/lib/jvm/java-8/bin/java
-JAVA_17_PATH=/usr/lib/jvm/java-17/bin/java
-JAVA_21_PATH=/usr/lib/jvm/java-21/bin/java
+# Javaパス（host戦略使用時 - 全バージョン）
+JAVA_7_PATH=/usr/lib/jvm/java-7-openjdk-amd64/bin/java
+JAVA_8_PATH=/usr/lib/jvm/java-8-openjdk-amd64/bin/java
+JAVA_16_PATH=/usr/lib/jvm/java-16-openjdk-amd64/bin/java
+JAVA_17_PATH=/usr/lib/jvm/java-17-openjdk-amd64/bin/java
+JAVA_21_PATH=/usr/lib/jvm/java-21-openjdk-amd64/bin/java
 
 # ファイルストレージ
 DATA_DIR=/data  # 全ファイルストレージのベースディレクトリ
 MAX_UPLOAD_SIZE_MB=100  # Nginx/リバースプロキシ層で強制
+
+# アーカイブセキュリティ（設定可能な制限）
+ARCHIVE_MAX_SIZE_MB=500                    # アーカイブファイル最大サイズ
+ARCHIVE_MAX_FILES=10000                    # アーカイブ内最大ファイル数
+ARCHIVE_MAX_FILE_SIZE_MB=500               # 個別ファイル最大サイズ
+ARCHIVE_MAX_COMPRESSION_RATIO=100          # 最大圧縮率（zip爆弾検出）
+
+# グレースフルシャットダウン
+BACKUP_SHUTDOWN_TIMEOUT_SECONDS=300        # バックアップ待機タイムアウト（秒）
 
 # タイムゾーン
 TZ=UTC  # バックエンドタイムゾーン（UTCに固定）
@@ -1060,4 +1355,4 @@ services:
 
 ---
 
-**最終更新日**: 2025-12-26
+**最終更新日**: 2025-12-28

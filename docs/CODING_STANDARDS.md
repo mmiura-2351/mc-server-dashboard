@@ -17,25 +17,36 @@ All code must align with the project philosophy:
 
 ## Python (Backend)
 
+### Package Manager
+
+**Package Manager**: [uv](https://docs.astral.sh/uv/)
+
+**Rationale**:
+- Fast dependency resolution and installation
+- Compatible with pip and requirements.txt
+- Built-in virtual environment management
+- Single tool for package management
+
 ### Code Style
 
-**Formatter**: [Black](https://black.readthedocs.io/) (line length: 100)
+**Formatter**: [Ruff](https://docs.astral.sh/ruff/) (line length: 100)
 **Linter**: [Ruff](https://docs.astral.sh/ruff/)
-**Import Sorting**: [isort](https://pycqa.github.io/isort/) (Black-compatible profile)
+
+**Rationale**: Ruff provides both formatting and linting in a single, extremely fast tool written in Rust.
 
 **Configuration** (`pyproject.toml`):
 ```toml
-[tool.black]
-line-length = 100
-target-version = ['py313']
-
 [tool.ruff]
 line-length = 100
 target-version = "py313"
 
-[tool.isort]
-profile = "black"
-line_length = 100
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP", "B", "C4", "SIM"]
+ignore = []
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
 ```
 
 **Automated enforcement**: Pre-commit hooks and CI checks
@@ -96,7 +107,7 @@ warn_unused_configs = true
 
 ### Import Organization
 
-**Order** (enforced by `isort`):
+**Order** (enforced by `ruff`):
 1. Standard library imports
 2. Third-party imports
 3. Local application imports
@@ -717,4 +728,4 @@ Required checks before merge (see [WORKFLOW.md](./WORKFLOW.md)):
 
 ---
 
-**Last Updated**: 2025-12-26
+**Last Updated**: 2025-12-28

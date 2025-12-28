@@ -74,36 +74,12 @@ All documents are available in both English and Japanese:
 - Japanese: [WORKFLOW.ja.md](./WORKFLOW.ja.md)
 
 **Key Topics**:
-- Git branching strategy (main/develop/feature hybrid model)
+- Git branching strategy (Release Flow)
 - Commit message conventions (Conventional Commits)
 - Pull request and review process
 - CI/CD requirements and automation
 - Release process and GitHub Releases
 - Dependency management (Dependabot)
-
----
-
-### 5. Implementation Gap Analysis
-
-**Purpose**: Comprehensive analysis of differences between existing implementation and proposed architecture.
-
-**Files**:
-- English: [IMPLEMENTATION_GAP_ANALYSIS.md](./IMPLEMENTATION_GAP_ANALYSIS.md)
-- Japanese: [IMPLEMENTATION_GAP_ANALYSIS.ja.md](./IMPLEMENTATION_GAP_ANALYSIS.ja.md)
-
-**Key Topics**:
-- Technology stack differences (Python/FastAPI → NestJS/TypeScript)
-- Feature gaps (15+ critical features in existing not documented)
-- Data model differences
-- Security implementation details
-- Deployment approach differences
-- Testing strategy gaps
-- Recommendations for documentation updates
-
-**Critical Findings**:
-- Existing implementation has many production-grade features not in proposed docs
-- Test coverage reality (75-80%) vs proposed target (95%)
-- Important security features (audit logging, file history, etc.) not documented
 
 ---
 
@@ -113,9 +89,8 @@ For new contributors or team members, we recommend reading the documentation in 
 
 1. **[PHILOSOPHY.md](./PHILOSOPHY.md)** - Understand the project's core values and principles
 2. **[ARCHITECTURE.md](./ARCHITECTURE.md)** - Learn the overall system structure and technology stack
-3. **[IMPLEMENTATION_GAP_ANALYSIS.md](./IMPLEMENTATION_GAP_ANALYSIS.md)** - Understand differences between existing and proposed implementation
-4. **[CODING_STANDARDS.md](./CODING_STANDARDS.md)** - Familiarize yourself with code conventions
-5. **[WORKFLOW.md](./WORKFLOW.md)** - Understand the development process
+3. **[CODING_STANDARDS.md](./CODING_STANDARDS.md)** - Familiarize yourself with code conventions
+4. **[WORKFLOW.md](./WORKFLOW.md)** - Understand the development process
 
 ---
 

@@ -329,12 +329,56 @@ class DockerOutOfDockerStrategy(ServerLaunchStrategy):
 ```
 
 **Selection Logic**:
-- Per-server configuration OR global application setting
+- **System-wide configuration**: One launch strategy for the entire application
+- Configured via environment variable: `DEFAULT_LAUNCH_STRATEGY=host|dind|dood`
+- All servers use the same strategy (no per-server selection in initial implementation)
+- **Strategy change**: Future feature (simple flag change in DB, applied on next server start)
+
+**Java Compatibility**:
 - Java compatibility matrix applies only to HostProcessStrategy
+- Docker strategies (DinD/DooD) use Java included in `itzg/minecraft-server` image
 
 ---
 
-### 2. Unified Snapshot System (Version Management)
+### 2. Java Compatibility Matrix (HostProcessStrategy Only)
+
+**Purpose**: Automatic Java version selection for Minecraft servers launched as host processes
+
+**Minecraft Version → Java Version Mapping**:
+```
+Minecraft Version    | Required Java Version
+---------------------|---------------------
+~ 1.7.9             | Java 7
+1.7.10 ~ 1.16.5     | Java 8
+1.17 ~ 1.17.1       | Java 16
+1.18 ~ 1.20.4       | Java 17
+1.20.5 ~            | Java 21
+```
+
+**Java Detection Logic** (HostProcessStrategy only):
+1. Check `.env` configuration first:
+   ```bash
+   JAVA_8_PATH=/usr/lib/jvm/java-8-openjdk-amd64/bin/java
+   JAVA_16_PATH=/usr/lib/jvm/java-16-openjdk-amd64/bin/java
+   JAVA_17_PATH=/usr/lib/jvm/java-17-openjdk-amd64/bin/java
+   JAVA_21_PATH=/usr/lib/jvm/java-21-openjdk-amd64/bin/java
+   ```
+2. If not in `.env`, check standard paths:
+   ```bash
+   /usr/lib/jvm/java-{7,8,16,17,21}-openjdk-amd64/bin/java
+   ```
+3. Detection runs at API startup for all Java versions
+4. Java detection API endpoint provided for verification
+
+**Error Handling**:
+- If required Java version not found → return error when server creation requested
+- No fallback to different Java version (compatibility issues)
+
+**Note**: Paper/Forge/Fabric have the same Java requirements as Vanilla
+
+---
+
+### 3. Unified Snapshot System (Version Management)
 
 **Purpose**: Common versioning for files and world backups
 
@@ -362,7 +406,52 @@ Snapshot (
 
 ---
 
-### 3. Backup Scheduler with Configurable Limits
+### 4. Server Status State Machine
+
+**Purpose**: Define clear server lifecycle states and allowed operations
+
+**Server States**:
+```
+- stopped     : Server is not running
+- starting    : Server is starting up (process launch → ready)
+- running     : Server is running (players can connect)
+- stopping    : Server is shutting down
+- unknown     : Server state cannot be determined (temporary, will re-detect)
+```
+
+**State Transitions**:
+```
+stopped  → starting   (start operation)
+starting → running    (startup complete detected)
+starting → stopped    (startup failed or stop operation with force=True)
+starting → unknown    (process tracking lost)
+running  → stopping   (stop operation)
+running  → unknown    (process tracking lost)
+stopping → stopped    (shutdown complete detected)
+stopping → unknown    (process tracking lost)
+unknown  → any state  (state re-detection)
+```
+
+**Allowed Operations by State**:
+
+| State    | start | stop | restart | RCON | config change | delete |
+|----------|-------|------|---------|------|---------------|--------|
+| stopped  | ✅    | ❌   | ❌      | ❌   | ✅            | ✅     |
+| starting | ❌    | ✅*  | ❌      | ❌   | ❌            | ❌     |
+| running  | ❌    | ✅   | ✅      | ✅   | ❌            | ❌     |
+| stopping | ❌    | ❌   | ❌      | ❌   | ❌            | ❌     |
+| unknown  | ❌    | ❌   | ❌      | ❌   | ❌            | ❌     |
+
+\* `starting` state stop requires `force=True` parameter
+
+**Notes**:
+- `unknown` is a temporary state that resolves automatically via state re-detection
+- No `error` state (failures result in `stopped` state, errors logged separately)
+- External shutdowns (Docker command, process kill, in-game `/stop`) are supported
+
+---
+
+### 5. Backup Scheduler with Configurable Limits
 
 **Three-tier limit system**:
 
@@ -378,14 +467,30 @@ if user_limit.max_backups > app_config.MAX_BACKUPS:
     raise ValidationError("Exceeds application limit")
 ```
 
+**Backup Timing**:
+- **Interval-based**: Backup every N hours after Minecraft server starts
+- Example: Server starts at 10:00 AM, interval=6h → backups at 4:00 PM, 10:00 PM, etc.
+- Timer resets when Minecraft server restarts
+
+**API Restart Behavior**:
+- If API restarts while Minecraft server is running:
+  - Timer recalculates from API startup time
+  - Example: API restarts at 3:00 PM (interval=6h) → next backup at 9:00 PM
+- Missed backups during API downtime are NOT executed (skip to next interval)
+
+**Backup Failure Handling**:
+- Failed backups are recorded in database (`Snapshot` table with `status: failed`)
+- Failure reason stored in metadata
+- No retry logic (wait for next scheduled interval)
+
 **Database-Persistent Scheduler**:
-- Survives API restarts
-- In-memory cache for performance
-- Background task for execution
+- Configuration stored in `BackupSchedule` table
+- In-memory timer for execution
+- Background task checks and executes backups
 
 ---
 
-### 4. Group Management (OP/Whitelist)
+### 6. Group Management (OP/Whitelist)
 
 **Purpose**: Centralized player permission management
 
@@ -409,7 +514,7 @@ ServerGroup (
 
 ---
 
-### 5. Minecraft Version Cache
+### 7. Minecraft Version Cache
 
 **Purpose**: Avoid repeated external API calls
 
@@ -431,7 +536,7 @@ MinecraftVersion (
 
 ---
 
-### 6. User Approval Workflow
+### 8. User Approval Workflow
 
 **Flow**:
 1. User registers → `is_approved = False`
@@ -450,7 +555,7 @@ User (
 
 ---
 
-### 7. Refresh Token Revocation
+### 9. Refresh Token Revocation
 
 **Security Feature**:
 - Refresh tokens stored in database
@@ -469,7 +574,112 @@ RefreshToken (
 
 ---
 
-### 8. Security Implementation
+### 10. Permission-Based Access Control (PBAC)
+
+**Purpose**: Granular permission system with role-based defaults and user-specific overrides
+
+**Permission Calculation**: `(Role Permissions ∪ User Granted) - User Denied`
+
+**Permission Naming Convention**: `category.action[.scope]`
+
+**Total Permissions**: 38 permissions across 7 categories
+
+**Permission List**:
+
+**1. servers (Server Management) - 8 permissions**
+```
+servers.create          - Create new server
+servers.view            - View own servers
+servers.view_all        - View all servers (admin)
+servers.update          - Modify server configuration
+servers.delete          - Delete server
+servers.start           - Start server
+servers.stop            - Stop server (includes force stop with force=True)
+servers.restart         - Restart server
+```
+
+**2. rcon (RCON Execution) - 1 permission**
+```
+rcon.execute            - Execute RCON commands on other users' servers
+                          (Note: Users can always execute RCON on their own servers)
+```
+
+**3. files (File Management) - 5 permissions**
+```
+files.view              - View files
+files.edit              - Edit files
+files.upload            - Upload files
+files.download          - Download files
+files.delete            - Delete files
+```
+
+**4. backups (Backup Management) - 6 permissions**
+```
+backups.create          - Create manual backup
+backups.view            - View backup list
+backups.restore         - Restore from backup
+backups.delete          - Delete backup
+backups.schedule        - Configure automatic backup schedule
+backups.download        - Download backup file
+```
+
+**5. groups (Group Management) - 6 permissions**
+```
+groups.create           - Create new group
+groups.view             - View groups
+groups.update           - Edit group configuration
+groups.delete           - Delete group
+groups.attach           - Attach group to server
+groups.detach           - Detach group from server
+```
+
+**6. users (User Management) - 8 permissions**
+```
+users.view              - View user list
+users.create            - Create new user
+users.update            - Edit user information
+users.delete            - Delete user
+users.approve           - Approve new user registration
+users.change_role       - Change user role
+users.grant_permission  - Grant individual permission to user
+users.deny_permission   - Deny individual permission to user
+```
+
+**7. system (System Settings) - 4 permissions**
+```
+system.view_settings    - View system configuration
+system.update_settings  - Modify system configuration
+system.view_health      - View health check information
+system.manage_limits    - Manage 3-tier limit configuration
+```
+
+**Database Schema**:
+```sql
+-- Permission definitions
+permissions (
+  id, category, action, scope, description
+)
+
+-- Role default permissions
+role_permissions (
+  id, role ENUM('admin', 'operator', 'user'), permission_id FK
+)
+
+-- User-specific permission grants/denials
+user_permissions (
+  id, user_id FK, permission_id FK,
+  is_granted BOOLEAN  -- true: grant, false: deny
+)
+```
+
+**Notes**:
+- `is_dangerous` flag not used (removed from design)
+- Permission calculation prevents users from modifying their own permissions
+- Audit logging applies to all permission changes (implemented separately)
+
+---
+
+### 11. Security Implementation
 
 #### a) Path Traversal Prevention
 ```python
@@ -489,6 +699,21 @@ def validate_archive(archive_path: Path) -> None:
     # Reject symlinks, device files, absolute paths
 ```
 
+**Configurable Limits** (via environment variables):
+```bash
+ARCHIVE_MAX_SIZE_MB=500                    # Maximum archive file size
+ARCHIVE_MAX_FILES=10000                    # Maximum number of files in archive
+ARCHIVE_MAX_FILE_SIZE_MB=500               # Maximum individual file size
+ARCHIVE_MAX_COMPRESSION_RATIO=100          # Maximum compression ratio (zip bomb detection)
+```
+
+**Rejected File Types** (to be determined based on security considerations):
+- Symlinks
+- Device files
+- Absolute paths (`/` prefix)
+- Parent directory references (`../`)
+- Additional types TBD
+
 #### c) Input Sanitization (Frontend)
 ```typescript
 class InputSanitizer {
@@ -502,7 +727,7 @@ class InputSanitizer {
 
 ---
 
-### 9. Internationalization (i18n)
+### 12. Internationalization (i18n)
 
 **Supported Languages**: English, Japanese
 
@@ -514,7 +739,7 @@ class InputSanitizer {
 
 ---
 
-### 10. Connection Monitoring (Minimal)
+### 13. Connection Monitoring (Minimal)
 
 **Purpose**: Basic API health check
 
@@ -526,7 +751,7 @@ class InputSanitizer {
 
 ---
 
-### 11. Web-based RCON Execution
+### 14. Web-based RCON Execution
 
 **Purpose**: Execute Minecraft server commands from Web UI
 
@@ -549,7 +774,7 @@ class InputSanitizer {
 
 ---
 
-### 12. Server Log Retrieval (Strategy Pattern)
+### 15. Server Log Retrieval (Strategy Pattern)
 
 **Purpose**: Display Minecraft server logs in Web UI with minimal overhead
 
@@ -584,7 +809,7 @@ class LogRetrievalStrategy(ABC):
 
 ---
 
-### 13. Unified Error Response Format
+### 16. Unified Error Response Format
 
 **Purpose**: Consistent API error handling across all endpoints
 
@@ -621,6 +846,25 @@ class LogRetrievalStrategy(ABC):
 - Type-safe error parsing with TypeScript interfaces
 - Internationalized error messages (en/ja)
 - User-friendly error display
+
+**`details` Field Structure**:
+- Standardized per feature (defined during implementation)
+- Example structures:
+  ```json
+  // VALIDATION_ERROR
+  "details": {
+    "field": "backup_interval",
+    "constraint": "must be >= 1 hour",
+    "provided": "30 minutes"
+  }
+
+  // AUTHORIZATION_ERROR
+  "details": {
+    "required_permission": "servers.delete",
+    "user_role": "operator"
+  }
+  ```
+- Implementation-phase decision (not pre-defined for all error codes)
 
 ---
 
@@ -672,12 +916,52 @@ User → Frontend (Update group players)
 
 ---
 
+## Graceful Shutdown Procedure
+
+**Purpose**: Ensure clean API shutdown without data loss or corruption
+
+### API Shutdown Behavior
+
+**1. Minecraft Servers**:
+- **Keep running**: Minecraft servers are NOT stopped during API shutdown
+- Processes/containers continue running independently
+- API reconnects to running servers after restart
+- Rationale: Minimize player disruption
+
+**2. In-Progress Backups**:
+- **Wait for completion**: API waits for running backups to finish
+- Timeout: 5 minutes (configurable via `BACKUP_SHUTDOWN_TIMEOUT_SECONDS`)
+- If timeout exceeded: Force shutdown, backup marked as `failed` in database
+- Partial backup files are cleaned up on next startup
+
+**3. Database Connections**:
+- **Explicit cleanup**: All PostgreSQL connections are properly closed
+- Connection pool is shut down gracefully
+- Ensures no orphaned connections or transaction locks
+
+**Implementation**:
+```python
+@app.on_event("shutdown")
+async def shutdown_event():
+    # 1. Wait for in-progress backups (with timeout)
+    await backup_service.wait_for_completion(timeout=300)
+
+    # 2. Close database connections
+    await database.disconnect()
+
+    # 3. Cleanup resources
+    await cleanup_temp_files()
+```
+
+**Note**: Minecraft servers remain running and must be manually stopped if needed before host shutdown
+
+---
+
 ## Deployment Architecture
 
 ### Development Environment
 
 ```yaml
-version: '3.8'
 services:
   postgres:
     image: postgres:16
@@ -780,13 +1064,21 @@ MAX_BACKUP_INTERVAL_HOURS=168
 DEFAULT_LAUNCH_STRATEGY=host  # host|dind|dood
 
 # Java paths (if using host strategy)
-JAVA_8_PATH=/usr/lib/jvm/java-8/bin/java
-JAVA_17_PATH=/usr/lib/jvm/java-17/bin/java
-JAVA_21_PATH=/usr/lib/jvm/java-21/bin/java
+JAVA_7_PATH=/usr/lib/jvm/java-7-openjdk-amd64/bin/java
+JAVA_8_PATH=/usr/lib/jvm/java-8-openjdk-amd64/bin/java
+JAVA_16_PATH=/usr/lib/jvm/java-16-openjdk-amd64/bin/java
+JAVA_17_PATH=/usr/lib/jvm/java-17-openjdk-amd64/bin/java
+JAVA_21_PATH=/usr/lib/jvm/java-21-openjdk-amd64/bin/java
 
 # File storage
 DATA_DIR=/data  # Base directory for all file storage
 MAX_UPLOAD_SIZE_MB=100  # Enforced at Nginx/reverse proxy layer
+
+# Archive Security (configurable limits)
+ARCHIVE_MAX_SIZE_MB=500                    # Maximum archive file size
+ARCHIVE_MAX_FILES=10000                    # Maximum number of files in archive
+ARCHIVE_MAX_FILE_SIZE_MB=500               # Maximum individual file size
+ARCHIVE_MAX_COMPRESSION_RATIO=100          # Maximum compression ratio (zip bomb detection)
 
 # Timezone
 TZ=UTC  # Backend timezone (fixed to UTC)
@@ -794,6 +1086,9 @@ TZ=UTC  # Backend timezone (fixed to UTC)
 # API Rate Limiting (relaxed, realistic limits)
 RATE_LIMIT_PER_MINUTE=60  # General API calls
 LOGIN_RATE_LIMIT_PER_MINUTE=10  # Login attempts per IP
+
+# Graceful Shutdown
+BACKUP_SHUTDOWN_TIMEOUT_SECONDS=300  # Wait time for backups during shutdown (5 minutes)
 ```
 
 **Frontend (.env)**:
@@ -1059,4 +1354,4 @@ services:
 
 ---
 
-**Last Updated**: 2025-12-26
+**Last Updated**: 2025-12-28

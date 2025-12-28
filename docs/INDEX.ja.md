@@ -74,36 +74,12 @@
 - 日本語: [WORKFLOW.ja.md](./WORKFLOW.ja.md)
 
 **主なトピック**:
-- Gitブランチ戦略（main/develop/featureハイブリッドモデル）
+- Gitブランチ戦略（Release Flow）
 - コミットメッセージ規約（Conventional Commits）
 - プルリクエストとレビュープロセス
 - CI/CD要件と自動化
 - リリースプロセスとGitHub Releases
 - 依存関係管理（Dependabot）
-
----
-
-### 5. 実装ギャップ分析
-
-**目的**: 既存実装と提案アーキテクチャの間の差異の包括的分析。
-
-**ファイル**:
-- 英語: [IMPLEMENTATION_GAP_ANALYSIS.md](./IMPLEMENTATION_GAP_ANALYSIS.md)
-- 日本語: [IMPLEMENTATION_GAP_ANALYSIS.ja.md](./IMPLEMENTATION_GAP_ANALYSIS.ja.md)
-
-**主なトピック**:
-- 技術スタックの違い（Python/FastAPI → NestJS/TypeScript）
-- 機能ギャップ（既存にある15以上の重要機能がドキュメント化されていない）
-- データモデルの違い
-- セキュリティ実装詳細
-- デプロイアプローチの違い
-- テスト戦略のギャップ
-- ドキュメント更新の推奨事項
-
-**重要な発見**:
-- 既存実装には提案ドキュメントにない多くの本番グレード機能が存在
-- テストカバレッジの現実（75-80%）対提案目標（95%）
-- 重要なセキュリティ機能（監査ログ、ファイル履歴など）がドキュメント化されていない
 
 ---
 
@@ -113,9 +89,8 @@
 
 1. **[PHILOSOPHY.md](./PHILOSOPHY.md)** - プロジェクトの中核的な価値観と原則を理解する
 2. **[ARCHITECTURE.md](./ARCHITECTURE.md)** - システム全体の構造と技術スタックを学ぶ
-3. **[IMPLEMENTATION_GAP_ANALYSIS.md](./IMPLEMENTATION_GAP_ANALYSIS.md)** - 既存実装と提案実装の違いを理解する
-4. **[CODING_STANDARDS.md](./CODING_STANDARDS.md)** - コード規約に慣れる
-5. **[WORKFLOW.md](./WORKFLOW.md)** - 開発プロセスを理解する
+3. **[CODING_STANDARDS.md](./CODING_STANDARDS.md)** - コード規約に慣れる
+4. **[WORKFLOW.md](./WORKFLOW.md)** - 開発プロセスを理解する
 
 ---
 

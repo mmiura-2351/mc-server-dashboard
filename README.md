@@ -16,14 +16,23 @@ This project is a complete redesign and reimplementation of an existing Minecraf
 
 This repository contains the **reimplementation** of the Minecraft Server Dashboard, designed with improved architecture, maintainability, and extensibility.
 
-### Existing Implementations
+### External Reference Repositories
 
-The original implementations (which this project replaces) can be found at:
+The following external repositories are linked **for reference purposes only**:
 
 - [Backend API (Python/FastAPI)](https://github.com/mmiura-2351/mc-server-dashboard-api)
 - [Frontend UI (Next.js/React)](https://github.com/mmiura-2351/mc-server-dashboard-ui)
 
-This redesign addresses limitations in the original implementation by establishing clear architectural principles and comprehensive documentation before development begins.
+**Important**: These repositories serve solely to:
+- Verify existing feature specifications
+- Provide a feature list reference
+
+They are **NOT** used for:
+- Design decisions in this project
+- Architectural patterns
+- Implementation references
+
+This project is designed and implemented **completely from scratch**, independent of the external repositories.
 
 ## Documentation
 
