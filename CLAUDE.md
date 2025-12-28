@@ -82,9 +82,11 @@ These are **specifications**, not implementation:
 
 ### Critical Implementation Requirements
 
+- **Package Manager**: uv (Python package management)
 - **Test Coverage**: Target ≥95% (current reality: 75-80%)
 - **Type Safety**: Required for all Python functions, strict TypeScript mode
-- **Code Formatting**: Black (Python), Prettier (TypeScript) - line length 100
+- **Code Formatting**: Ruff (Python), Prettier (TypeScript) - line length 100
+- **Linting**: Ruff (Python), ESLint (TypeScript)
 - **Java Compatibility Matrix**: Only applies to HostProcessStrategy (5 Java versions: 7, 8, 16, 17, 21)
 
 ## Git Workflow

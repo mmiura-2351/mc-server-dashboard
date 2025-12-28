@@ -17,25 +17,36 @@
 
 ## Python（バックエンド）
 
+### パッケージマネージャ
+
+**パッケージマネージャ**: [uv](https://docs.astral.sh/uv/)
+
+**理由**:
+- 高速な依存関係解決とインストール
+- pipとrequirements.txtとの互換性
+- 組み込みの仮想環境管理
+- パッケージ管理のための単一ツール
+
 ### コードスタイル
 
-**フォーマッター**: [Black](https://black.readthedocs.io/)（行長: 100）
+**フォーマッター**: [Ruff](https://docs.astral.sh/ruff/)（行長: 100）
 **リンター**: [Ruff](https://docs.astral.sh/ruff/)
-**インポートソート**: [isort](https://pycqa.github.io/isort/)（Black互換プロファイル）
+
+**理由**: RuffはRustで書かれた非常に高速な単一ツールで、フォーマットとリントの両方を提供します。
 
 **設定** (`pyproject.toml`):
 ```toml
-[tool.black]
-line-length = 100
-target-version = ['py313']
-
 [tool.ruff]
 line-length = 100
 target-version = "py313"
 
-[tool.isort]
-profile = "black"
-line_length = 100
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP", "B", "C4", "SIM"]
+ignore = []
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
 ```
 
 **自動強制**: pre-commitフックとCIチェック
@@ -96,7 +107,7 @@ warn_unused_configs = true
 
 ### インポートの整理
 
-**順序**（`isort`で強制）:
+**順序**（`ruff`で強制）:
 1. 標準ライブラリのインポート
 2. サードパーティのインポート
 3. ローカルアプリケーションのインポート
@@ -717,4 +728,4 @@ repos:
 
 ---
 
-**最終更新日**: 2025-12-26
+**最終更新日**: 2025-12-28
