@@ -20,7 +20,7 @@ module.exports = {
     node: true,
   },
   rules: {
-    '@typescript-eslint/explicit-function-return-type': 'warn',
+    '@typescript-eslint/explicit-function-return-type': 'off',
     '@typescript-eslint/no-unused-vars': [
       'error',
       {
