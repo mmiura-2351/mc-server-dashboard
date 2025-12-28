@@ -17,13 +17,8 @@ const nextConfig: NextConfig = {
     removeConsole: process.env.NODE_ENV === 'production',
   },
 
-  // ESLint configuration
-  eslint: {
-    dirs: ['src'],
-  },
-
   // Output standalone for Docker deployment
   output: 'standalone',
-};
+} satisfies NextConfig;
 
 export default nextConfig;
