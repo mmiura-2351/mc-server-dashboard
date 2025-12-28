@@ -48,7 +48,36 @@ Start with the index to navigate the full documentation suite covering project p
 
 ## Getting Started
 
-> **Note**: Implementation has not yet begun. This section will be updated once the codebase is available.
+### Quick Start with Docker Compose
+
+```bash
+# Clone the repository
+git clone <repository-url>
+cd mc-server-dashboard
+
+# Create environment file
+cp .env.example .env
+
+# Start all services
+docker compose up -d
+
+# Access the application
+# - Frontend: http://localhost:3000
+# - Backend API: http://localhost:8000
+# - API Documentation: http://localhost:8000/docs
+```
+
+### Development Setup
+
+For detailed setup instructions, see **[DEVELOPMENT.md](docs/DEVELOPMENT.md)**.
+
+### Current Implementation Status
+
+**Minimal implementation available for Docker/CI verification:**
+- ✅ Backend API with health check endpoints
+- ✅ Frontend UI with API status monitoring
+- ✅ Basic test suites for both frontend and backend
+- ⏳ Feature implementation in progress (following specifications in `docs/`)
 
 ## License
 
