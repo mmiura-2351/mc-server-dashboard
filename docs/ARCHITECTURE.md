@@ -727,7 +727,7 @@ class InputSanitizer {
 
 ---
 
-### 11. Internationalization (i18n)
+### 12. Internationalization (i18n)
 
 **Supported Languages**: English, Japanese
 
@@ -739,7 +739,7 @@ class InputSanitizer {
 
 ---
 
-### 12. Connection Monitoring (Minimal)
+### 13. Connection Monitoring (Minimal)
 
 **Purpose**: Basic API health check
 
@@ -751,7 +751,7 @@ class InputSanitizer {
 
 ---
 
-### 13. Web-based RCON Execution
+### 14. Web-based RCON Execution
 
 **Purpose**: Execute Minecraft server commands from Web UI
 
@@ -774,7 +774,7 @@ class InputSanitizer {
 
 ---
 
-### 14. Server Log Retrieval (Strategy Pattern)
+### 15. Server Log Retrieval (Strategy Pattern)
 
 **Purpose**: Display Minecraft server logs in Web UI with minimal overhead
 
@@ -809,7 +809,7 @@ class LogRetrievalStrategy(ABC):
 
 ---
 
-### 15. Unified Error Response Format
+### 16. Unified Error Response Format
 
 **Purpose**: Consistent API error handling across all endpoints
 
@@ -1354,4 +1354,4 @@ services:
 
 ---
 
-**Last Updated**: 2025-12-27
+**Last Updated**: 2025-12-28

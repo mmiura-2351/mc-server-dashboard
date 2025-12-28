@@ -869,37 +869,6 @@ class LogRetrievalStrategy(ABC):
 
 ---
 
-### 17. グレースフルシャットダウン
-
-**目的**: Minecraftサーバーを実行したままAPIを再起動
-
-**グレースフルシャットダウン手順**:
-```python
-@app.on_event("shutdown")
-async def shutdown_event():
-    # 1. 進行中のバックアップを待つ（タイムアウト付き）
-    await backup_service.wait_for_completion(timeout=300)
-
-    # 2. データベース接続を閉じる
-    await database.disconnect()
-
-    # 3. リソースをクリーンアップ
-    await cleanup_temp_files()
-```
-
-**重要な動作**:
-- Minecraftサーバープロセスはバックグラウンドで実行し続ける
-- プレイヤーには影響なし（接続維持）
-- PIDファイル追跡により再起動後に再接続（HostProcessStrategy）
-- Docker戦略は自動的に再接続（Dockerデーモンがコンテナを管理）
-
-**バックアップ待機タイムアウト**:
-- デフォルト: 300秒（5分）
-- 環境変数で設定可能: `BACKUP_SHUTDOWN_TIMEOUT_SECONDS`
-- タイムアウト時の動作: 進行中のバックアップは失敗としてマーク、次回間隔でリトライ
-
----
-
 ## データフロー例
 
 ### 1. サーバー作成フロー
@@ -945,6 +914,47 @@ async def shutdown_event():
     ← 成功を返却
   ← UIを更新
 ```
+
+---
+
+## グレースフルシャットダウン手順
+
+**目的**: データ損失や破損なしにAPIのクリーンなシャットダウンを保証
+
+### APIシャットダウン動作
+
+**1. Minecraftサーバー**:
+- **実行を継続**: APIシャットダウン中にMinecraftサーバーは停止されない
+- プロセス/コンテナは独立して実行を継続
+- API再起動後に実行中のサーバーに再接続
+- 理由: プレイヤーへの影響を最小限に抑える
+
+**2. 進行中のバックアップ**:
+- **完了を待機**: APIは実行中のバックアップの完了を待つ
+- タイムアウト: 5分（`BACKUP_SHUTDOWN_TIMEOUT_SECONDS`で設定可能）
+- タイムアウト超過時: 強制シャットダウン、バックアップはデータベースで`failed`としてマーク
+- 部分的なバックアップファイルは次回起動時にクリーンアップ
+
+**3. データベース接続**:
+- **明示的なクリーンアップ**: すべてのPostgreSQL接続を適切に閉じる
+- 接続プールをグレースフルにシャットダウン
+- 孤立した接続やトランザクションロックがないことを保証
+
+**実装**:
+```python
+@app.on_event("shutdown")
+async def shutdown_event():
+    # 1. 進行中のバックアップを待つ（タイムアウト付き）
+    await backup_service.wait_for_completion(timeout=300)
+
+    # 2. データベース接続を閉じる
+    await database.disconnect()
+
+    # 3. リソースをクリーンアップ
+    await cleanup_temp_files()
+```
+
+**注意**: Minecraftサーバーは実行を継続するため、ホストシャットダウン前に必要に応じて手動で停止する必要があります
 
 ---
 
@@ -1345,4 +1355,4 @@ services:
 
 ---
 
-**最終更新日**: 2025-12-27
+**最終更新日**: 2025-12-28
