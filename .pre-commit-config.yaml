@@ -4,7 +4,7 @@
 repos:
   # Ruff - Fast Python linter and formatter
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.8.5
+    rev: v0.14.10
     hooks:
       # Run the linter
       - id: ruff
@@ -16,7 +16,7 @@ repos:
 
   # mypy - Static type checker
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.13.0
+    rev: v1.19.1
     hooks:
       - id: mypy
         files: ^api/src/

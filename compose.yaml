@@ -33,6 +33,11 @@ services:
       - "${API_PORT:-8000}:8000"
     volumes:
       - ./api:/app
+      # ⚠️ SECURITY WARNING:
+      # Mounting Docker socket grants the container root-level access to the host.
+      # This is acceptable for trusted local development environments only.
+      # For production, use Docker Socket Proxy or Rootless Docker.
+      # See docs/DEVELOPMENT.md "Security Considerations" section for details.
       - /var/run/docker.sock:/var/run/docker.sock  # For Docker-based strategies
     depends_on:
       postgres:

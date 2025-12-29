@@ -1,6 +1,6 @@
 # 開発環境セットアップ
 
-**最終更新日**: 2025-12-28
+**最終更新日**: 2025-12-30
 
 ## 目的
 
@@ -250,6 +250,113 @@ npm run type-check
 npm run build
 npm start
 ```
+
+---
+
+## ⚠️ セキュリティに関する重要な注意事項
+
+### Dockerソケットの露出について
+
+開発環境の`compose.yaml`では、DockerベースのMinecraftサーバー起動戦略（Docker-in-Docker、Docker-out-of-Docker）をサポートするため、
+Dockerソケット（`/var/run/docker.sock`）をAPIコンテナにマウントしています。
+
+**これは以下のセキュリティリスクを伴います**：
+
+- **ホストへのroot権限アクセス**: コンテナがホストのDockerデーモンにフルアクセス可能
+- **コンテナエスケープのリスク**: 悪意のあるコードがコンテナから脱出してホストシステムを侵害可能
+- **権限昇格の可能性**: コンテナ内のプロセスが実質的にホストのroot権限を取得可能
+
+**開発環境での使用**：信頼できる開発者のローカル環境でのみ許容されます。
+
+**本番環境では絶対に使用しないでください。**
+
+### 本番環境での推奨セキュリティ対策
+
+本番環境では、以下のいずれかの方法を使用してください：
+
+#### 1. Docker Socket Proxy（推奨）
+
+特定のDocker API操作のみを許可するプロキシを使用：
+
+```yaml
+# compose.prod.yaml
+services:
+  docker-socket-proxy:
+    image: tecnativa/docker-socket-proxy:latest
+    environment:
+      CONTAINERS: 1  # コンテナ操作を許可
+      IMAGES: 1      # イメージ操作を許可
+      POST: 1        # POST リクエストを許可
+      BUILD: 0       # ビルドは拒否
+      EXEC: 0        # exec は拒否（重要）
+      VOLUMES: 1     # ボリューム操作を許可
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - mc-dashboard-network
+
+  api:
+    environment:
+      DOCKER_HOST: tcp://docker-socket-proxy:2375  # プロキシ経由で接続
+    # volumes:
+    #   - /var/run/docker.sock:/var/run/docker.sock  # 直接マウント削除
+```
+
+**メリット**：
+- 最小権限の原則に従った細かい権限制御
+- パフォーマンスへの影響がほぼゼロ
+- アプリケーションコードの変更不要（環境変数`DOCKER_HOST`のみ）
+
+#### 2. Rootless Docker
+
+ホスト側でRootless Dockerを使用：
+
+```bash
+# ホスト側でRootless Dockerをセットアップ
+dockerd-rootless-setuptool.sh install
+systemctl --user enable docker
+systemctl --user start docker
+```
+
+**メリット**：
+- ホストへのroot権限不要
+- コンテナエスケープのリスクを大幅に低減
+- パフォーマンスへの影響は5%未満
+
+#### 3. Docker Remote API with TLS
+
+TLS認証付きのDocker Remote APIを使用：
+
+```yaml
+api:
+  environment:
+    DOCKER_HOST: tcp://docker-host:2376
+    DOCKER_TLS_VERIFY: 1
+    DOCKER_CERT_PATH: /certs
+  volumes:
+    - ./certs:/certs:ro
+```
+
+**メリット**：
+- ネットワーク経由でのDocker制御（リモート実行可能）
+- TLS証明書による認証・暗号化
+- 物理的なソケット露出を回避
+
+### 移行計画
+
+現在のDocker-out-of-Docker（DooD）実装から本番環境用のセキュアな構成への移行は非常に簡単です：
+
+1. **アプリケーションコード**：Pythonの`docker.from_env()`を使用（環境変数から自動設定）
+2. **開発環境**：現在の`compose.yaml`を継続使用
+3. **本番環境**：`compose.prod.yaml`を作成し、上記のいずれかの方法を実装
+
+**コード変更は不要**で、設定ファイルの変更のみで移行できます。
+
+### 参考情報
+
+- [Docker Security Best Practices](https://docs.docker.com/engine/security/)
+- [Rootless Docker](https://docs.docker.com/engine/security/rootless/)
+- [Docker Socket Proxy](https://github.com/Tecnativa/docker-socket-proxy)
 
 ---
 

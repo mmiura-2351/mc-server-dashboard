@@ -1,6 +1,6 @@
 # Development Environment Setup
 
-**Last Updated**: 2025-12-28
+**Last Updated**: 2025-12-30
 
 ## Purpose
 
@@ -250,6 +250,113 @@ npm run type-check
 npm run build
 npm start
 ```
+
+---
+
+## ⚠️ Security Considerations
+
+### Docker Socket Exposure
+
+The development environment `compose.yaml` mounts the Docker socket (`/var/run/docker.sock`) to the API container
+to support Docker-based Minecraft server launch strategies (Docker-in-Docker, Docker-out-of-Docker).
+
+**This introduces the following security risks**:
+
+- **Root-level host access**: The container has full access to the host's Docker daemon
+- **Container escape risk**: Malicious code can escape the container and compromise the host system
+- **Privilege escalation**: Processes within the container effectively gain host root privileges
+
+**Development use**: This is acceptable only in trusted local development environments.
+
+**Never use this in production.**
+
+### Recommended Security Measures for Production
+
+For production environments, use one of the following approaches:
+
+#### 1. Docker Socket Proxy (Recommended)
+
+Use a proxy that allows only specific Docker API operations:
+
+```yaml
+# compose.prod.yaml
+services:
+  docker-socket-proxy:
+    image: tecnativa/docker-socket-proxy:latest
+    environment:
+      CONTAINERS: 1  # Allow container operations
+      IMAGES: 1      # Allow image operations
+      POST: 1        # Allow POST requests
+      BUILD: 0       # Deny builds
+      EXEC: 0        # Deny exec (critical)
+      VOLUMES: 1     # Allow volume operations
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - mc-dashboard-network
+
+  api:
+    environment:
+      DOCKER_HOST: tcp://docker-socket-proxy:2375  # Connect via proxy
+    # volumes:
+    #   - /var/run/docker.sock:/var/run/docker.sock  # Remove direct mount
+```
+
+**Benefits**:
+- Fine-grained permission control following the principle of least privilege
+- Near-zero performance impact
+- No application code changes required (only `DOCKER_HOST` environment variable)
+
+#### 2. Rootless Docker
+
+Use Rootless Docker on the host:
+
+```bash
+# Set up Rootless Docker on the host
+dockerd-rootless-setuptool.sh install
+systemctl --user enable docker
+systemctl --user start docker
+```
+
+**Benefits**:
+- No root privileges required on the host
+- Significantly reduced container escape risk
+- Performance impact less than 5%
+
+#### 3. Docker Remote API with TLS
+
+Use Docker Remote API with TLS authentication:
+
+```yaml
+api:
+  environment:
+    DOCKER_HOST: tcp://docker-host:2376
+    DOCKER_TLS_VERIFY: 1
+    DOCKER_CERT_PATH: /certs
+  volumes:
+    - ./certs:/certs:ro
+```
+
+**Benefits**:
+- Docker control over network (remote execution possible)
+- Authentication and encryption via TLS certificates
+- Avoids physical socket exposure
+
+### Migration Plan
+
+Migrating from the current Docker-out-of-Docker (DooD) implementation to a secure production configuration is very straightforward:
+
+1. **Application code**: Use Python's `docker.from_env()` (automatically reads environment variables)
+2. **Development environment**: Continue using current `compose.yaml`
+3. **Production environment**: Create `compose.prod.yaml` and implement one of the above methods
+
+**No code changes required** - only configuration file updates.
+
+### References
+
+- [Docker Security Best Practices](https://docs.docker.com/engine/security/)
+- [Rootless Docker](https://docs.docker.com/engine/security/rootless/)
+- [Docker Socket Proxy](https://github.com/Tecnativa/docker-socket-proxy)
 
 ---
 
