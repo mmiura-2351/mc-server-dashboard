@@ -83,6 +83,26 @@ All documents are available in both English and Japanese:
 
 ---
 
+### 5. Development Environment Setup
+
+**Purpose**: Provides step-by-step instructions for setting up the development environment.
+
+**Files**:
+- English: [DEVELOPMENT.md](./DEVELOPMENT.md)
+- Japanese: [DEVELOPMENT.ja.md](./DEVELOPMENT.ja.md)
+
+**Key Topics**:
+- Prerequisites (Docker, Git, Python, Node.js)
+- Project structure overview
+- Quick start with Docker Compose
+- Local development setup (without Docker)
+- Database management and migrations
+- Common development tasks
+- Troubleshooting
+- IDE setup recommendations
+
+---
+
 ## Reading Order
 
 For new contributors or team members, we recommend reading the documentation in this order:
@@ -91,7 +111,8 @@ For new contributors or team members, we recommend reading the documentation in 
 2. **[ARCHITECTURE.md](./ARCHITECTURE.md)** - Learn the overall system structure and technology stack
 3. **[CODING_STANDARDS.md](./CODING_STANDARDS.md)** - Familiarize yourself with code conventions
 4. **[WORKFLOW.md](./WORKFLOW.md)** - Understand the development process
+5. **[DEVELOPMENT.md](./DEVELOPMENT.md)** - Set up your development environment
 
 ---
 
-**Last Updated**: 2025-12-26
+**Last Updated**: 2025-12-28

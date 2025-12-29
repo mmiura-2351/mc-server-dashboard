@@ -1,0 +1,74 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: mc-dashboard-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-mcadmin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mcpassword}
+      POSTGRES_DB: ${POSTGRES_DB:-mc_dashboard}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mcadmin}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - mc-dashboard-network
+
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: mc-dashboard-api
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-mcadmin}:${POSTGRES_PASSWORD:-mcpassword}@postgres:5432/${POSTGRES_DB:-mc_dashboard}
+      SECRET_KEY: ${SECRET_KEY:-dev-secret-key-change-in-production}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
+      REFRESH_TOKEN_EXPIRE_DAYS: ${REFRESH_TOKEN_EXPIRE_DAYS:-7}
+      PYTHONPATH: /app/src
+    ports:
+      - "${API_PORT:-8000}:8000"
+    volumes:
+      - ./api:/app
+      # ⚠️ SECURITY WARNING:
+      # Mounting Docker socket grants the container root-level access to the host.
+      # This is acceptable for trusted local development environments only.
+      # For production, use Docker Socket Proxy or Rootless Docker.
+      # See docs/DEVELOPMENT.md "Security Considerations" section for details.
+      - /var/run/docker.sock:/var/run/docker.sock  # For Docker-based strategies
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - mc-dashboard-network
+    command: sh -c "pip install --no-cache-dir fastapi 'uvicorn[standard]' httpx pytest pytest-asyncio 2>/dev/null || true && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+
+  ui:
+    build:
+      context: ./ui
+      dockerfile: Dockerfile
+    container_name: mc-dashboard-ui
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+    ports:
+      - "${UI_PORT:-3000}:3000"
+    volumes:
+      - ./ui:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      - api
+    networks:
+      - mc-dashboard-network
+    command: sh -c "npm install && npm run dev"
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  mc-dashboard-network:
+    driver: bridge

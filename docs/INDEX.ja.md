@@ -83,6 +83,26 @@
 
 ---
 
+### 5. 開発環境セットアップ
+
+**目的**: 開発環境をセットアップするための手順を詳しく説明します。
+
+**ファイル**:
+- 英語: [DEVELOPMENT.md](./DEVELOPMENT.md)
+- 日本語: [DEVELOPMENT.ja.md](./DEVELOPMENT.ja.md)
+
+**主なトピック**:
+- 前提条件（Docker、Git、Python、Node.js）
+- プロジェクト構造の概要
+- Docker Composeを使ったクイックスタート
+- ローカル開発セットアップ（Dockerなし）
+- データベース管理とマイグレーション
+- よくある開発タスク
+- トラブルシューティング
+- IDE設定の推奨事項
+
+---
+
 ## 推奨読書順序
 
 新しいコントリビューターやチームメンバーには、以下の順序でドキュメントを読むことをお勧めします：
@@ -91,7 +111,8 @@
 2. **[ARCHITECTURE.md](./ARCHITECTURE.md)** - システム全体の構造と技術スタックを学ぶ
 3. **[CODING_STANDARDS.md](./CODING_STANDARDS.md)** - コード規約に慣れる
 4. **[WORKFLOW.md](./WORKFLOW.md)** - 開発プロセスを理解する
+5. **[DEVELOPMENT.md](./DEVELOPMENT.md)** - 開発環境をセットアップする
 
 ---
 
-**最終更新日**: 2025-12-26
+**最終更新日**: 2025-12-28

@@ -55,3 +55,14 @@ htmlcov/
 .cache/
 cache/
 *.cache
+
+# CI/CD artifacts
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.cover
+coverage.xml
+.coverage.*
+
+# Pre-commit
+.pre-commit-cache/
