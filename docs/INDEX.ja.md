@@ -103,6 +103,25 @@
 
 ---
 
+### 6. 実装ガイド
+
+**目的**: タスク理解からマージまでの機能実装の段階的ワークフローを提供します。
+
+**ファイル**:
+- 英語: [IMPLEMENTATION_GUIDE.md](./IMPLEMENTATION_GUIDE.md)
+- 日本語: [IMPLEMENTATION_GUIDE.ja.md](./IMPLEMENTATION_GUIDE.ja.md)
+
+**主なトピック**:
+- タスク理解と現状確認
+- API優先開発アプローチ（APIとUIの分離）
+- データベースマイグレーションワークフロー
+- 実装チェックリストとベストプラクティス
+- 質問すべき場合（要件を推測しない）
+- タスク優先順位付けガイド
+- 具体例: ユーザー登録API
+
+---
+
 ## 推奨読書順序
 
 新しいコントリビューターやチームメンバーには、以下の順序でドキュメントを読むことをお勧めします：
@@ -112,7 +131,8 @@
 3. **[CODING_STANDARDS.md](./CODING_STANDARDS.md)** - コード規約に慣れる
 4. **[WORKFLOW.md](./WORKFLOW.md)** - 開発プロセスを理解する
 5. **[DEVELOPMENT.md](./DEVELOPMENT.md)** - 開発環境をセットアップする
+6. **[IMPLEMENTATION_GUIDE.md](./IMPLEMENTATION_GUIDE.md)** - タスクの実装ワークフローを学ぶ
 
 ---
 
-**最終更新日**: 2025-12-28
+**最終更新日**: 2025-12-30

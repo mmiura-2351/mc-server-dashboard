@@ -32,13 +32,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Located in `docs/`:
 
 1. **INDEX.md / INDEX.ja.md** - Documentation index and reading order
-2. **PHILOSOPHY.md / PHILOSOPHY.ja.md** - Core values and design principles
+2. **PHILOSOPHY.md / PHILOSOPHY.ja.md** - Core values and design principles (158 lines)
 3. **ARCHITECTURE.md / ARCHITECTURE.ja.md** - System architecture (1357-1358 lines)
    - 15 main sections (##)
    - 16 numbered feature subsections (###)
    - Includes: Java compatibility matrix, PBAC system (38 permissions), state machine, graceful shutdown
-4. **CODING_STANDARDS.md / CODING_STANDARDS.ja.md** - Coding conventions
-5. **WORKFLOW.md / WORKFLOW.ja.md** - Git workflow and development process
+4. **CODING_STANDARDS.md / CODING_STANDARDS.ja.md** - Coding conventions (731 lines)
+5. **WORKFLOW.md / WORKFLOW.ja.md** - Git workflow and development process (576 lines)
+6. **DEVELOPMENT.md / DEVELOPMENT.ja.md** - Development environment setup (689 lines)
+7. **IMPLEMENTATION_GUIDE.md / IMPLEMENTATION_GUIDE.ja.md** - Implementation workflow (878 lines)
+   - **CRITICAL for implementation tasks**: Read this before starting any feature implementation
+   - Step-by-step workflow from task understanding to merge
+   - API-first development (API and UI completely separate)
+   - Concrete example: User Registration API implementation
 
 ### Verification Commands
 
@@ -126,6 +132,139 @@ EOF
 )"
 ```
 
+## Common Development Commands
+
+### Environment Setup
+
+```bash
+# Start all services (recommended for development)
+docker compose up -d
+
+# Check service status
+docker compose ps
+
+# View logs
+docker compose logs -f          # All services
+docker compose logs -f api      # Backend only
+docker compose logs -f ui       # Frontend only
+
+# Stop all services
+docker compose down
+
+# Stop and remove volumes (reset database)
+docker compose down -v
+```
+
+### Backend (Python/FastAPI)
+
+```bash
+cd api
+
+# Code quality checks (run before commit)
+ruff check .                    # Linting
+ruff format .                   # Formatting
+mypy src/                       # Type checking
+
+# Testing
+pytest                          # Run all tests
+pytest --cov                    # With coverage report
+pytest --cov --cov-fail-under=75  # Enforce 75% minimum coverage
+pytest tests/test_auth.py       # Run single test file
+pytest tests/test_auth.py::test_register_success  # Run single test
+
+# Database migrations
+alembic revision --autogenerate -m "description"  # Create migration
+alembic upgrade head            # Apply migrations
+alembic downgrade -1            # Rollback one migration
+alembic history                 # List all migrations
+
+# Development server (if not using Docker)
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+### Frontend (Next.js/React/TypeScript)
+
+```bash
+cd ui
+
+# Code quality checks (run before commit)
+npm run lint                    # ESLint
+npm run format                  # Prettier
+npm run type-check              # TypeScript
+
+# Testing
+npm run test                    # Run all tests
+npm run test:coverage           # With coverage report
+npm run test -- path/to/test.tsx  # Run single test
+
+# Build
+npm run build                   # Production build
+npm run start                   # Start production server
+
+# Development server (if not using Docker)
+npm run dev
+```
+
+### Documentation Verification
+
+```bash
+# Verify bilingual documentation structure
+grep -c "^## " docs/IMPLEMENTATION_GUIDE.md docs/IMPLEMENTATION_GUIDE.ja.md
+
+# Check line counts (should be similar)
+wc -l docs/IMPLEMENTATION_GUIDE.md docs/IMPLEMENTATION_GUIDE.ja.md
+
+# Verify Last Updated dates match
+grep "Last Updated\|最終更新日" docs/IMPLEMENTATION_GUIDE.md docs/IMPLEMENTATION_GUIDE.ja.md
+```
+
+## Implementation Workflow Overview
+
+**CRITICAL**: Before implementing any feature, follow the workflow in `docs/IMPLEMENTATION_GUIDE.md`.
+
+### Quick Reference
+
+**When you receive an implementation task** (e.g., "Create user registration API"):
+
+1. **Step 0: Task Understanding** (MUST DO FIRST)
+   - Check current Git branch (`git branch`) - never work on `main`
+   - Create/switch to feature branch: `git checkout -b feature/api-<name>`
+   - Clarify requirements - ask questions if anything is unclear
+   - Review ARCHITECTURE.md for specifications
+   - Search for existing similar implementations
+   - Confirm scope with stakeholder
+
+2. **Step 1: Task Analysis**
+   - Determine: API only / UI only / Both (separate PRs)
+   - Check if database migration needed
+   - Identify dependencies
+
+3. **Step 2: API Implementation** (if applicable)
+   - Branch: `feature/api-<name>`
+   - Create Alembic migration (if needed)
+   - Implement: Pydantic schemas → DB models → Services → Endpoints → Tests
+   - Target 95% coverage (minimum 75%)
+   - Run quality checks: `ruff check . && ruff format . && mypy src/ && pytest --cov`
+   - Create PR, wait for CI, merge with "Squash and merge"
+
+4. **Step 3: UI Implementation** (separate task, separate PR)
+   - Branch: `feature/ui-<name>`
+   - Wait for API PR to be merged first
+   - Implement: TypeScript types → API client → Components → Tests
+   - Run quality checks: `npm run lint && npm run format && npm run type-check && npm run test`
+   - Create PR, wait for CI, merge with "Squash and merge"
+
+5. **Step 4: Integration**
+   - Manual testing with `docker compose up -d`
+   - Update documentation if needed
+
+**Key Principles**:
+- Never guess requirements - always ask when uncertain
+- API and UI are completely separate (different branches, different PRs)
+- ARCHITECTURE.md is the source of truth
+- Tests are mandatory (minimum 75%, aim for 95%)
+- Never commit directly to `main`
+
 ## External Reference Repositories
 
 **CRITICAL UNDERSTANDING**: Two symlinked directories exist for **reference purposes ONLY**:
@@ -175,9 +314,13 @@ EOF
 
 ## Common Pitfalls to Avoid
 
-1. **DO NOT assume code exists** - treat all code examples as specifications
-2. **DO NOT reference the external repositories** for design decisions
-3. **DO NOT modify only one language version** - always update pairs
+1. **DO NOT work directly on `main` branch** - always create a feature branch first
+2. **DO NOT assume code exists** - treat all code examples in docs as specifications
+3. **DO NOT reference the external repositories** for design decisions
+4. **DO NOT modify only one language version** - always update pairs
+5. **DO NOT implement API and UI in the same branch/PR** - separate branches, separate PRs
+6. **DO NOT skip Step 0 (Task Understanding)** - always clarify requirements before coding
+7. **DO NOT guess requirements** - ask questions when uncertain
 
 ## Philosophy and Design Principles
 
