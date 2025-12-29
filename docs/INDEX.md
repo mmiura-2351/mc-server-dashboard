@@ -103,6 +103,25 @@ All documents are available in both English and Japanese:
 
 ---
 
+### 6. Implementation Guide
+
+**Purpose**: Provides step-by-step workflow for implementing features from task understanding to merge.
+
+**Files**:
+- English: [IMPLEMENTATION_GUIDE.md](./IMPLEMENTATION_GUIDE.md)
+- Japanese: [IMPLEMENTATION_GUIDE.ja.md](./IMPLEMENTATION_GUIDE.ja.md)
+
+**Key Topics**:
+- Task understanding and current state review
+- API-first development approach (API and UI separation)
+- Database migration workflow
+- Implementation checklist and best practices
+- When to ask questions (never assume requirements)
+- Task prioritization guide
+- Concrete example: User Registration API
+
+---
+
 ## Reading Order
 
 For new contributors or team members, we recommend reading the documentation in this order:
@@ -112,7 +131,8 @@ For new contributors or team members, we recommend reading the documentation in 
 3. **[CODING_STANDARDS.md](./CODING_STANDARDS.md)** - Familiarize yourself with code conventions
 4. **[WORKFLOW.md](./WORKFLOW.md)** - Understand the development process
 5. **[DEVELOPMENT.md](./DEVELOPMENT.md)** - Set up your development environment
+6. **[IMPLEMENTATION_GUIDE.md](./IMPLEMENTATION_GUIDE.md)** - Learn the implementation workflow for tasks
 
 ---
 
-**Last Updated**: 2025-12-28
+**Last Updated**: 2025-12-30
