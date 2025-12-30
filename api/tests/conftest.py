@@ -18,10 +18,10 @@ def test_engine():
         AsyncEngine: Test database engine
     """
     # Test database URL (in-memory SQLite for testing)
-    TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
+    test_database_url = "sqlite+aiosqlite:///:memory:"
 
     # Create test engine
-    engine = create_async_engine(TEST_DATABASE_URL, echo=False)
+    engine = create_async_engine(test_database_url, echo=False)
 
     yield engine
 

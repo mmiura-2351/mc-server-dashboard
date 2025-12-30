@@ -9,9 +9,7 @@ from app.models.user import User, UserRole
 
 
 @pytest.mark.asyncio
-async def test_register_user_success(
-    client: TestClient, db_session: AsyncSession, override_get_db: None
-) -> None:
+async def test_register_user_success(client: TestClient, db_session: AsyncSession) -> None:
     """Test successful user registration."""
     response = client.post(
         "/api/v1/auth/register",
@@ -29,7 +27,7 @@ async def test_register_user_success(
 
 
 @pytest.mark.asyncio
-async def test_register_duplicate_username(client: TestClient, db_session: AsyncSession, override_get_db: None) -> None:
+async def test_register_duplicate_username(client: TestClient, db_session: AsyncSession) -> None:
     """Test registration with duplicate username."""
     # Register first user
     client.post(
@@ -48,7 +46,7 @@ async def test_register_duplicate_username(client: TestClient, db_session: Async
 
 
 @pytest.mark.asyncio
-async def test_register_duplicate_email(client: TestClient, db_session: AsyncSession, override_get_db: None) -> None:
+async def test_register_duplicate_email(client: TestClient, db_session: AsyncSession) -> None:
     """Test registration with duplicate email."""
     # Register first user
     client.post(
@@ -67,7 +65,7 @@ async def test_register_duplicate_email(client: TestClient, db_session: AsyncSes
 
 
 @pytest.mark.asyncio
-async def test_login_success(client: TestClient, db_session: AsyncSession, override_get_db: None) -> None:
+async def test_login_success(client: TestClient, db_session: AsyncSession) -> None:
     """Test successful login."""
     # Create approved user
     user = User(
@@ -94,7 +92,7 @@ async def test_login_success(client: TestClient, db_session: AsyncSession, overr
 
 
 @pytest.mark.asyncio
-async def test_login_unapproved_user(client: TestClient, db_session: AsyncSession, override_get_db: None) -> None:
+async def test_login_unapproved_user(client: TestClient, db_session: AsyncSession) -> None:
     """Test login with unapproved user."""
     # Create unapproved user
     user = User(
@@ -118,7 +116,7 @@ async def test_login_unapproved_user(client: TestClient, db_session: AsyncSessio
 
 
 @pytest.mark.asyncio
-async def test_login_wrong_password(client: TestClient, db_session: AsyncSession, override_get_db: None) -> None:
+async def test_login_wrong_password(client: TestClient, db_session: AsyncSession) -> None:
     """Test login with wrong password."""
     # Create user
     user = User(
@@ -142,7 +140,7 @@ async def test_login_wrong_password(client: TestClient, db_session: AsyncSession
 
 
 @pytest.mark.asyncio
-async def test_login_nonexistent_user(client: TestClient, db_session: AsyncSession, override_get_db: None) -> None:
+async def test_login_nonexistent_user(client: TestClient, db_session: AsyncSession) -> None:
     """Test login with nonexistent user."""
     response = client.post(
         "/api/v1/auth/login", json={"username": "nonexistent", "password": "password123"}
@@ -153,7 +151,7 @@ async def test_login_nonexistent_user(client: TestClient, db_session: AsyncSessi
 
 
 @pytest.mark.asyncio
-async def test_refresh_token_success(client: TestClient, db_session: AsyncSession, override_get_db: None) -> None:
+async def test_refresh_token_success(client: TestClient, db_session: AsyncSession) -> None:
     """Test successful token refresh."""
     # Create approved user and login
     user = User(
@@ -182,7 +180,7 @@ async def test_refresh_token_success(client: TestClient, db_session: AsyncSessio
 
 
 @pytest.mark.asyncio
-async def test_refresh_token_invalid(client: TestClient, db_session: AsyncSession, override_get_db: None) -> None:
+async def test_refresh_token_invalid(client: TestClient, db_session: AsyncSession) -> None:
     """Test token refresh with invalid token."""
     response = client.post("/api/v1/auth/refresh", json={"refresh_token": "invalid_token"})
 
@@ -191,7 +189,7 @@ async def test_refresh_token_invalid(client: TestClient, db_session: AsyncSessio
 
 
 @pytest.mark.asyncio
-async def test_logout_success(client: TestClient, db_session: AsyncSession, override_get_db: None) -> None:
+async def test_logout_success(client: TestClient, db_session: AsyncSession) -> None:
     """Test successful logout."""
     # Create approved user and login
     user = User(
@@ -221,7 +219,7 @@ async def test_logout_success(client: TestClient, db_session: AsyncSession, over
 
 
 @pytest.mark.asyncio
-async def test_logout_invalid_token(client: TestClient, db_session: AsyncSession, override_get_db: None) -> None:
+async def test_logout_invalid_token(client: TestClient, db_session: AsyncSession) -> None:
     """Test logout with invalid token."""
     response = client.post("/api/v1/auth/logout", json={"refresh_token": "invalid_token"})
 
@@ -229,7 +227,7 @@ async def test_logout_invalid_token(client: TestClient, db_session: AsyncSession
 
 
 @pytest.mark.asyncio
-async def test_login_inactive_user(client: TestClient, db_session: AsyncSession, override_get_db: None) -> None:
+async def test_login_inactive_user(client: TestClient, db_session: AsyncSession) -> None:
     """Test login with inactive user."""
     # Create inactive user
     user = User(
@@ -253,7 +251,7 @@ async def test_login_inactive_user(client: TestClient, db_session: AsyncSession,
 
 
 @pytest.mark.asyncio
-async def test_refresh_token_expired(client: TestClient, db_session: AsyncSession, override_get_db: None) -> None:
+async def test_refresh_token_expired(client: TestClient, db_session: AsyncSession) -> None:
     """Test token refresh with expired token."""
     from datetime import UTC, datetime, timedelta
 
@@ -290,9 +288,7 @@ async def test_refresh_token_expired(client: TestClient, db_session: AsyncSessio
 
 
 @pytest.mark.asyncio
-async def test_create_tokens_revokes_existing_tokens(
-    db_session: AsyncSession, override_get_db: None
-) -> None:
+async def test_create_tokens_revokes_existing_tokens(db_session: AsyncSession) -> None:
     """Test that creating new tokens revokes existing active tokens."""
     from datetime import UTC, datetime, timedelta
 
