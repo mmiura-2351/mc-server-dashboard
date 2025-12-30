@@ -81,7 +81,7 @@ jobs:
           docker compose run --rm api bash -c "
             timeout --kill-after=5s 15s uv run pytest --cov --cov-report=xml --cov-report=term-missing > /tmp/pytest.log 2>&1 || test_exit=\$?
             cat /tmp/pytest.log
-            if grep -q '= passed' /tmp/pytest.log && [ \"\${test_exit:-0}\" -eq 124 ]; then
+            if grep -q 'passed in' /tmp/pytest.log && [ \"\${test_exit:-0}\" -eq 124 ]; then
               echo 'Tests passed but pytest hung during cleanup (timeout 124). Treating as success.'
               exit 0
             else
