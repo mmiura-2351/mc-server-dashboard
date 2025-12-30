@@ -113,14 +113,11 @@ jobs:
       - name: Install dependencies
         run: uv pip install --system -e ".[dev]"
 
-      - name: Run tests with coverage
+      - name: Run tests without coverage (debugging)
         run: |
-          echo "Starting pytest..."
-          timeout 120 pytest --cov --cov-report=xml --cov-report=term-missing -v || exit_code=$?
-          echo "Pytest exit code: $exit_code"
-          echo "Checking for remaining processes..."
-          ps aux | grep -E 'python|pytest' || true
-          exit ${exit_code:-0}
+          echo "Starting pytest without coverage..."
+          pytest -v
+          echo "Pytest completed successfully"
 
       - name: Upload coverage reports
         uses: codecov/codecov-action@v5
