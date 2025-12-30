@@ -321,9 +321,7 @@ async def test_create_tokens_revokes_existing_tokens(
     assert refresh_token1 is not None
 
     # Verify one token exists and is active
-    result = await db_session.execute(
-        select(RefreshToken).where(RefreshToken.user_id == user.id)
-    )
+    result = await db_session.execute(select(RefreshToken).where(RefreshToken.user_id == user.id))
     tokens = result.scalars().all()
     assert len(tokens) == 1
     assert tokens[0].is_revoked is False
@@ -345,9 +343,7 @@ async def test_create_tokens_revokes_existing_tokens(
     assert tokens[0].is_revoked is True
 
     # Verify we have 2 tokens total: 1 revoked, 1 active
-    result = await db_session.execute(
-        select(RefreshToken).where(RefreshToken.user_id == user.id)
-    )
+    result = await db_session.execute(select(RefreshToken).where(RefreshToken.user_id == user.id))
     all_tokens = result.scalars().all()
     assert len(all_tokens) == 2
 
@@ -355,5 +351,3 @@ async def test_create_tokens_revokes_existing_tokens(
     active_count = sum(1 for t in all_tokens if not t.is_revoked)
     assert revoked_count == 1
     assert active_count == 1
-
-
