@@ -76,8 +76,28 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      - name: Run tests in Docker (matching local environment)
-        run: docker compose run --rm api uv run pytest --cov --cov-report=xml --cov-report=term-missing
+      - name: Debug pytest execution
+        run: |
+          echo "=== Starting pytest with detailed debugging ==="
+          docker compose run --rm api bash -c "
+            echo 'Process list before pytest:'
+            ps auxf
+            echo ''
+            echo 'Starting pytest...'
+            timeout 30 uv run pytest --cov --cov-report=xml --cov-report=term-missing -v -s || exit_code=\$?
+            echo \"Pytest exit code: \$exit_code\"
+            echo ''
+            echo 'Process list after pytest:'
+            ps auxf
+            echo ''
+            echo 'Open files:'
+            lsof -p \$\$ 2>/dev/null || true
+            echo ''
+            echo 'Thread list:'
+            ps -eLf | grep python || true
+            exit \${exit_code:-0}
+          "
+          echo "=== Docker compose completed ==="
 
       - name: Upload coverage reports
         uses: codecov/codecov-action@v5
