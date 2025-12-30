@@ -84,7 +84,7 @@ jobs:
             ps auxf
             echo ''
             echo 'Starting pytest...'
-            timeout 30 uv run pytest --cov --cov-report=xml --cov-report=term-missing -v -s || exit_code=\$?
+            timeout 30 uv run pytest --cov --cov-report=term-missing -v -s || exit_code=\$?
             echo \"Pytest exit code: \$exit_code\"
             echo ''
             echo 'Process list after pytest:'
