@@ -89,8 +89,14 @@ def override_get_db(db_session: AsyncSession):
 
 
 @pytest.fixture
-def client():
+def client(override_get_db):
     """Create TestClient with proper resource cleanup.
+
+    IMPORTANT: This fixture depends on override_get_db to ensure the database
+    dependency override is set before the TestClient is created.
+
+    Args:
+        override_get_db: Fixture that overrides the get_db dependency
 
     Yields:
         TestClient: FastAPI test client
