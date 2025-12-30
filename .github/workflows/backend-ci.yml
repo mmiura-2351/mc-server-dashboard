@@ -111,13 +111,10 @@ jobs:
         run: pip install uv
 
       - name: Install dependencies
-        run: uv pip install --system -e ".[dev]"
+        run: uv sync --all-extras --dev
 
-      - name: Run tests without coverage (debugging)
-        run: |
-          echo "Starting pytest without coverage..."
-          pytest -v
-          echo "Pytest completed successfully"
+      - name: Run tests
+        run: uv run pytest --cov --cov-report=xml --cov-report=term-missing
 
       - name: Upload coverage reports
         uses: codecov/codecov-action@v5
