@@ -147,7 +147,11 @@ class AuthService:
             return None
 
         # Check if token is expired
-        if refresh_token.expires_at < datetime.now(UTC):
+        # SQLite doesn't support timezone, so we need to handle both aware and naive datetimes
+        expires_at = refresh_token.expires_at
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=UTC)
+        if expires_at < datetime.now(UTC):
             return None
 
         # Create new access token

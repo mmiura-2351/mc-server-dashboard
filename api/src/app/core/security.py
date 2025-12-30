@@ -1,6 +1,7 @@
 """Security utilities for password hashing and JWT token management."""
 
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from jose import jwt
 from passlib.context import CryptContext
@@ -36,7 +37,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
 
 
-def create_access_token(data: dict[str, str | int], expires_delta: timedelta | None = None) -> str:
+def create_access_token(data: dict[str, Any], expires_delta: timedelta | None = None) -> str:
     """Create a JWT access token.
 
     Args:
@@ -51,11 +52,12 @@ def create_access_token(data: dict[str, str | int], expires_delta: timedelta | N
         expire = datetime.now(UTC) + expires_delta
     else:
         expire = datetime.now(UTC) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+    to_encode["exp"] = expire
+    encoded: str = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+    return encoded
 
 
-def create_refresh_token(data: dict[str, str | int]) -> str:
+def create_refresh_token(data: dict[str, Any]) -> str:
     """Create a JWT refresh token.
 
     Args:
@@ -66,11 +68,12 @@ def create_refresh_token(data: dict[str, str | int]) -> str:
     """
     to_encode = data.copy()
     expire = datetime.now(UTC) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
-    to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+    to_encode["exp"] = expire
+    encoded: str = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+    return encoded
 
 
-def decode_token(token: str) -> dict[str, str | int]:
+def decode_token(token: str) -> dict[str, Any]:
     """Decode a JWT token.
 
     Args:
@@ -82,4 +85,5 @@ def decode_token(token: str) -> dict[str, str | int]:
     Raises:
         JWTError: If token is invalid or expired
     """
-    return jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+    decoded: dict[str, Any] = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+    return decoded
