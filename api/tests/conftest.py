@@ -8,60 +8,19 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from app.core.database import Base, get_db
 from app.main import app
 
+# Test database URL (in-memory SQLite for testing)
+TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
-@pytest.fixture(scope="session")
-def worker_id(request: pytest.FixtureRequest) -> str:
-    """Get worker ID for parallel test execution.
+# Create test engine
+test_engine = create_async_engine(TEST_DATABASE_URL, echo=False)
 
-    Args:
-        request: Pytest fixture request
-
-    Returns:
-        str: Worker ID (e.g., 'gw0', 'gw1') or 'master' for non-parallel execution
-    """
-    if hasattr(request.config, "workerinput"):
-        return request.config.workerinput["workerid"]
-    return "master"
-
-
-@pytest.fixture(scope="session")
-def test_engine(worker_id: str):
-    """Create test database engine for each worker.
-
-    Args:
-        worker_id: Worker ID for parallel execution
-
-    Returns:
-        AsyncEngine: Test database engine
-    """
-    # Use file-based SQLite with worker-specific database file for parallel execution
-    # This ensures each worker has its own isolated database
-    test_db_url = f"sqlite+aiosqlite:///test_{worker_id}.db"
-    engine = create_async_engine(test_db_url, echo=False)
-    yield engine
-    engine.sync_engine.dispose()
-
-
-@pytest.fixture(scope="session")
-def test_session_factory(test_engine):
-    """Create test session factory.
-
-    Args:
-        test_engine: Test database engine
-
-    Returns:
-        async_sessionmaker: Test session factory
-    """
-    return async_sessionmaker(test_engine, class_=AsyncSession, expire_on_commit=False)
+# Create test session factory
+TestSessionLocal = async_sessionmaker(test_engine, class_=AsyncSession, expire_on_commit=False)
 
 
 @pytest.fixture
-async def db_session(test_engine, test_session_factory) -> AsyncGenerator[AsyncSession]:
+async def db_session() -> AsyncGenerator[AsyncSession]:
     """Create a test database session.
-
-    Args:
-        test_engine: Test database engine
-        test_session_factory: Test session factory
 
     Yields:
         AsyncSession: Test database session
@@ -71,10 +30,10 @@ async def db_session(test_engine, test_session_factory) -> AsyncGenerator[AsyncS
         await conn.run_sync(Base.metadata.create_all)
 
     # Create session
-    async with test_session_factory() as session:
+    async with TestSessionLocal() as session:
         yield session
 
-    # Drop tables after test
+    # Drop tables
     async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
 
