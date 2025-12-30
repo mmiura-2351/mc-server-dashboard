@@ -295,7 +295,7 @@ async def test_create_tokens_revokes_existing_tokens(
     db_session: AsyncSession, override_get_db: None
 ) -> None:
     """Test that creating new tokens revokes existing active tokens."""
-    import asyncio
+    from datetime import UTC, datetime, timedelta
 
     from sqlalchemy import select
 
@@ -315,10 +315,16 @@ async def test_create_tokens_revokes_existing_tokens(
     await db_session.commit()
     await db_session.refresh(user)
 
-    # Create first tokens
-    access_token1, refresh_token1 = await AuthService.create_tokens(db_session, user)
-    assert access_token1 is not None
-    assert refresh_token1 is not None
+    # Directly create an existing refresh token in database
+    # (simulating a token from a previous login)
+    existing_token = RefreshToken(
+        token="old_refresh_token_string",
+        user_id=user.id,
+        expires_at=datetime.now(UTC) + timedelta(days=7),
+        is_revoked=False,
+    )
+    db_session.add(existing_token)
+    await db_session.commit()
 
     # Verify one token exists and is active
     result = await db_session.execute(select(RefreshToken).where(RefreshToken.user_id == user.id))
@@ -326,23 +332,19 @@ async def test_create_tokens_revokes_existing_tokens(
     assert len(tokens) == 1
     assert tokens[0].is_revoked is False
 
-    # Wait 1 second to ensure JWT exp timestamp is different
-    # (JWT tokens with same user_id and exp generate identical token strings)
-    await asyncio.sleep(1.0)
+    # Create new tokens (should revoke the existing token)
+    access_token, refresh_token = await AuthService.create_tokens(db_session, user)
+    assert access_token is not None
+    assert refresh_token is not None
+    assert refresh_token != "old_refresh_token_string"
 
-    # Create second tokens (should revoke first)
-    access_token2, refresh_token2 = await AuthService.create_tokens(db_session, user)
-    assert access_token2 is not None
-    assert refresh_token2 is not None
-    assert refresh_token2 != refresh_token1
+    # Refresh the existing token object to see updated state
+    await db_session.refresh(existing_token)
 
-    # Refresh the first token object to see updated state
-    await db_session.refresh(tokens[0])
+    # Verify existing token is now revoked
+    assert existing_token.is_revoked is True
 
-    # Verify first token is now revoked
-    assert tokens[0].is_revoked is True
-
-    # Verify we have 2 tokens total: 1 revoked, 1 active
+    # Verify we have 2 tokens total: 1 revoked (old), 1 active (new)
     result = await db_session.execute(select(RefreshToken).where(RefreshToken.user_id == user.id))
     all_tokens = result.scalars().all()
     assert len(all_tokens) == 2
