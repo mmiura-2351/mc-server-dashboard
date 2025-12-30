@@ -114,7 +114,13 @@ jobs:
         run: uv pip install --system -e ".[dev]"
 
       - name: Run tests with coverage
-        run: pytest --cov --cov-report=xml --cov-report=term-missing
+        run: |
+          echo "Starting pytest..."
+          timeout 120 pytest --cov --cov-report=xml --cov-report=term-missing -v || exit_code=$?
+          echo "Pytest exit code: $exit_code"
+          echo "Checking for remaining processes..."
+          ps aux | grep -E 'python|pytest' || true
+          exit ${exit_code:-0}
 
       - name: Upload coverage reports
         uses: codecov/codecov-action@v5
