@@ -33,6 +33,7 @@ services:
       - "${API_PORT:-8000}:8000"
     volumes:
       - ./api:/app
+      - /app/.venv  # Preserve venv from Docker image
       # ⚠️ SECURITY WARNING:
       # Mounting Docker socket grants the container root-level access to the host.
       # This is acceptable for trusted local development environments only.

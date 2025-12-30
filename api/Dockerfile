@@ -9,7 +9,7 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 COPY pyproject.toml uv.lock* ./
 
 # Sync dependencies using uv (including dev dependencies)
-RUN uv sync --frozen --all-extras || uv sync --all-extras
+RUN uv sync --frozen --all-extras --dev || uv sync --all-extras --dev
 
 # Application code will be mounted via volume in compose.yaml
 
